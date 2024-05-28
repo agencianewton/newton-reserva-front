@@ -1,0 +1,17 @@
+.vertical-text {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg); /* Para ajustar a orientação do texto */
+  text-align: center;
+  max-width: 40px;
+  min-height: 290px;
+  display: flex;
+  font-size: 20px;
+  align-items: center;
+  justify-content: center;
+}
+
+@import "rsuite/dist/rsuite.css";
+
+#root {
+  padding: 10px;
+}
