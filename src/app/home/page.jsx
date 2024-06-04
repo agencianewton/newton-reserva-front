@@ -29,41 +29,116 @@ import "./home.css";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format } from "date-fns";
+import withAuth from "../components/AuthComponent/withAuth";
 
 import { CalendarIcon } from "@chakra-ui/icons";
 
-export default function Home() {
+const HomePage = () => {
   const [selectedDate, setSelectedDate] = useState(null);
-  const [startDate, setStartDate] = useState(new Date());
+
+  const [startDate, setStartDate] = useState();
   const [tablesAvailability, setTablesAvailability] = useState([]);
   const [tableID, setTableID] = useState();
   const [tableType, setTableType] = useState();
+  const [periodReserve, setPeriodReserve] = useState("dia_todo");
+  const [tableReserved, setTableReserved] = useState("");
+  const [reserveDate, setReserveDate] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const handleClickTable = (tableID, tableType) => {
-    setTableID(tableID);
-    setTableType(tableType);
-    onOpen();
+  const toast = useToast();
+
+  const handleClickTable = (tableID, tableType, tableCheck) => {
+    if (tableCheck == true) {
+      alert("Mesa já está reservada");
+    } else if (tableID == 4 || tableID == 6 || tableID == 8 || tableID == 10) {
+      alert("Você não tem permissão para agendar nessas mesas");
+    } else {
+      setTableID(tableID);
+      setTableType(tableType);
+      onOpen();
+    }
   };
+
+  const handleDateChange = (date) => {
+    setTableReserved("");
+    setStartDate(date);
+
+    getInfoDate(date);
+  };
+
   const getInfoDate = async (date) => {
     if (date) {
       const formattedDate = format(date, "yyyy-MM-dd");
-      setSelectedDate(formattedDate);
-
+      const token = localStorage.getItem("token");
       await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}reservations/${formattedDate}`
+        `${process.env.NEXT_PUBLIC_API_URL}reservations/${formattedDate}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
       )
         .then((res) => res.json())
         .then((data) => {
-          console.log(data.data?.tables);
           setTablesAvailability(data.items?.tables);
+        })
+        .catch((error) => {
+          console.error("Error fetching data:", error);
         });
     }
   };
 
+  const reservationTable = async () => {
+    if (tableType == 1) {
+      setPeriodReserve("dia_todo");
+    }
+
+    const data = {
+      table_id: tableID,
+      date: reserveDate,
+      period: periodReserve,
+    };
+    const token = localStorage.getItem("token");
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}reservation/table`,
+      {
+        method: "POST",
+
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      }
+    );
+
+    const responseData = await res.json();
+    if (res.ok) {
+      toast({
+        title: "Reserva realizada com sucesso",
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+      onClose();
+      setStartDate(reserveDate);
+      getInfoDate(reserveDate);
+    } else {
+      toast({
+        title: "Erro ao reservar",
+        description: responseData.error,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
   useEffect(() => {
-    getInfoDate(startDate);
-  }, [startDate]);
+    handleDateChange(new Date());
+  }, []);
   return (
     <>
       <Flex justifyContent={"center"} py={12} px={6} wrap={"wrap"}>
@@ -75,8 +150,9 @@ export default function Home() {
           </Box>
           <Box textAlign={"center"}>
             <DatePicker
+              dateFormat="dd/MM/yyyy"
               selected={startDate}
-              onChange={(date) => getInfoDate(date)}
+              onChange={(date) => handleDateChange(date)}
               customInput={<Input pr="4.5rem" icon={<CalendarIcon />} />}
             />
           </Box>
@@ -191,19 +267,30 @@ export default function Home() {
                     minH={"40px"}
                     border={"2px solid #000"}
                     p={5}
-                    id={tablesAvailability["1"]?.table_id}
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["1"]?.table_id,
-                        tablesAvailability["1"]?.table_type
+                        tablesAvailability["1"]?.table_type,
+                        tablesAvailability["1"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["1"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
                       )
                     }
-                    cursor={"pointer"}
+                    cursor={
+                      tablesAvailability["1"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["1"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
                     {tablesAvailability["1"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["1"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
-                      : "Mesa ocupada"}
+                      : tablesAvailability["1"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
                     bg={
@@ -213,6 +300,25 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["2"]?.table_id,
+                        tablesAvailability["2"]?.table_type,
+                        tablesAvailability["2"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["2"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
+                    cursor={
+                      tablesAvailability["2"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["2"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
@@ -220,7 +326,7 @@ export default function Home() {
                     {tablesAvailability["2"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["2"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
-                      : "Mesa ocupada"}
+                      : tablesAvailability["2"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
                     bg={
@@ -230,6 +336,25 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["3"]?.table_id,
+                        tablesAvailability["3"]?.table_type,
+                        tablesAvailability["3"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["3"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
+                    cursor={
+                      tablesAvailability["3"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["3"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
@@ -237,7 +362,7 @@ export default function Home() {
                     {tablesAvailability["3"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["3"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
-                      : "Mesa ocupada"}
+                      : tablesAvailability["3"]?.availability?.Tarde}
                   </GridItem>
                 </Grid>
               </Box>
@@ -261,6 +386,25 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["4"]?.table_id,
+                        tablesAvailability["4"]?.table_type,
+                        tablesAvailability["4"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["4"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
+                    cursor={
+                      tablesAvailability["4"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["4"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
@@ -275,14 +419,33 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["5"]?.table_id,
+                        tablesAvailability["5"]?.table_type,
+                        tablesAvailability["5"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["5"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
+                    cursor={
+                      tablesAvailability["5"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["5"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
                     {tablesAvailability["5"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["5"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
-                      : "Mesa ocupada"}
+                      : tablesAvailability["5"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
                     bg={
@@ -292,9 +455,28 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["6"]?.table_id,
+                        tablesAvailability["6"]?.table_type,
+                        tablesAvailability["6"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["6"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
+                    cursor={
+                      tablesAvailability["6"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["6"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
                     {tablesAvailability["6"]?.table_name}
                   </GridItem>
@@ -306,14 +488,33 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["7"]?.table_id,
+                        tablesAvailability["7"]?.table_type,
+                        tablesAvailability["7"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["7"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
+                    cursor={
+                      tablesAvailability["7"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["7"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
                     {tablesAvailability["7"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["7"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
-                      : "Mesa ocupada"}
+                      : tablesAvailability["7"]?.availability?.Tarde}
                   </GridItem>
                 </Grid>
                 <Grid
@@ -329,9 +530,28 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["8"]?.table_id,
+                        tablesAvailability["8"]?.table_type,
+                        tablesAvailability["8"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["8"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
+                    cursor={
+                      tablesAvailability["8"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["8"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
                     {tablesAvailability["8"]?.table_name}
                   </GridItem>
@@ -343,14 +563,33 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["9"]?.table_id,
+                        tablesAvailability["9"]?.table_type,
+                        tablesAvailability["9"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["9"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
+                    cursor={
+                      tablesAvailability["9"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["9"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
                     {tablesAvailability["9"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["9"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
-                      : "Mesa ocupada"}
+                      : tablesAvailability["9"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
                     bg={
@@ -360,9 +599,28 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["10"]?.table_id,
+                        tablesAvailability["10"]?.table_type,
+                        tablesAvailability["10"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["10"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={2}
+                    cursor={
+                      tablesAvailability["10"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["10"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
                     {tablesAvailability["10"]?.table_name}
                   </GridItem>
@@ -374,15 +632,34 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["11"]?.table_id,
+                        tablesAvailability["11"]?.table_type,
+                        tablesAvailability["11"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["11"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={2}
+                    cursor={
+                      tablesAvailability["11"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["11"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
                     {tablesAvailability["11"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["11"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
-                      : "Mesa ocupada"}
+                      : tablesAvailability["11"]?.availability?.Tarde}
                   </GridItem>
                 </Grid>
               </Box>
@@ -410,15 +687,34 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["12"]?.table_id,
+                        tablesAvailability["12"]?.table_type,
+                        tablesAvailability["12"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["12"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
+                    cursor={
+                      tablesAvailability["12"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["12"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
                     {tablesAvailability["12"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["12"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
-                      : "Mesa ocupada"}
+                      : tablesAvailability["12"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
                     bg="yellow"
@@ -449,15 +745,34 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["13"]?.table_id,
+                        tablesAvailability["13"]?.table_type,
+                        tablesAvailability["13"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["13"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
+                    cursor={
+                      tablesAvailability["13"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["13"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
                     {tablesAvailability["13"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["13"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
-                      : "Mesa ocupada"}
+                      : tablesAvailability["13"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
                     bg={
@@ -467,15 +782,34 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["14"]?.table_id,
+                        tablesAvailability["14"]?.table_type,
+                        tablesAvailability["14"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["14"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
+                    cursor={
+                      tablesAvailability["14"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["14"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
                     {tablesAvailability["14"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["14"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
-                      : "Mesa ocupada"}
+                      : tablesAvailability["14"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
                     bg={
@@ -485,15 +819,34 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["15"]?.table_id,
+                        tablesAvailability["15"]?.table_type,
+                        tablesAvailability["15"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["15"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
+                    cursor={
+                      tablesAvailability["15"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["15"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
                     {tablesAvailability["15"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["15"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
-                      : "Mesa ocupada"}
+                      : tablesAvailability["15"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
                     bg={
@@ -503,15 +856,34 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["16"]?.table_id,
+                        tablesAvailability["16"]?.table_type,
+                        tablesAvailability["16"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["16"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
+                    cursor={
+                      tablesAvailability["16"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["16"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
                     {tablesAvailability["16"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["16"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
-                      : "Mesa ocupada"}
+                      : tablesAvailability["16"]?.availability?.Tarde}
                   </GridItem>
                 </Grid>
               </Box>
@@ -576,6 +948,25 @@ export default function Home() {
                         ? "green"
                         : "red"
                     }
+                    onClick={() =>
+                      handleClickTable(
+                        tablesAvailability["17"]?.table_id,
+                        tablesAvailability["17"]?.table_type,
+                        tablesAvailability["17"]?.availability?.Manha ===
+                          "Livre" &&
+                          tablesAvailability["17"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
+                    cursor={
+                      tablesAvailability["17"]?.availability?.Manha ===
+                        "Livre" &&
+                      tablesAvailability["17"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
@@ -584,16 +975,10 @@ export default function Home() {
                       "Livre" &&
                     tablesAvailability["17"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
-                      : "Mesa ocupada"}
+                      : tablesAvailability["17"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
-                    bg={
-                      tablesAvailability["1"]?.availability?.Manha ===
-                        "Livre" &&
-                      tablesAvailability["1"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
-                    }
+                    bg={"yellow"}
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
@@ -601,13 +986,7 @@ export default function Home() {
                     Brunno{" "}
                   </GridItem>
                   <GridItem
-                    bg={
-                      tablesAvailability["1"]?.availability?.Manha ===
-                        "Livre" &&
-                      tablesAvailability["1"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
-                    }
+                    bg={"yellow"}
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
@@ -616,13 +995,7 @@ export default function Home() {
                   </GridItem>
 
                   <GridItem
-                    bg={
-                      tablesAvailability["1"]?.availability?.Manha ===
-                        "Livre" &&
-                      tablesAvailability["1"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
-                    }
+                    bg={"yellow"}
                     minH={"40px"}
                     border={"4px solid #000"}
                     p={5}
@@ -681,8 +1054,8 @@ export default function Home() {
             <p>MESA: {tableID}</p>
             <p>Selecione a data para a reserva:</p>
             <DatePicker
-              selected={selectedDate}
-              onChange={(date) => setSelectedDate(date)}
+              selected={reserveDate != null ? reserveDate : startDate}
+              onChange={(date) => setReserveDate(date)}
               dateFormat="dd/MM/yyyy"
               customInput={<Input pr="4.5rem" icon={<CalendarIcon />} />}
             />
@@ -706,10 +1079,13 @@ export default function Home() {
             <Button colorScheme="blue" mr={3} onClick={onClose}>
               Fechar
             </Button>
-            <Button colorScheme="green">Reservar</Button>
+            <Button colorScheme="green" onClick={reservationTable}>
+              Reservar
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
     </>
   );
-}
+};
+export default withAuth(HomePage);

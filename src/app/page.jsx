@@ -16,11 +16,13 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import NextLink from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const toast = useToast();
+  const router = useRouter();
 
   const submitLogin = async (event) => {
     event.preventDefault();
@@ -33,6 +35,10 @@ export default function login() {
     });
 
     const data = await res.json();
+
+    localStorage.setItem("token", data.access_token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+
     if (res.ok) {
       toast({
         title: "Login realizado",
@@ -40,6 +46,7 @@ export default function login() {
         duration: 5000,
         isClosable: true,
       });
+      router.push("/home");
     } else {
       toast({
         title: "Erro de login",
@@ -59,11 +66,11 @@ export default function login() {
         <Box rounded={"lg"} bg={"white"} boxShadow={"lg"} p={8}>
           <Stack spacing={4}>
             <FormControl id="email">
-              <FormLabel>Email address</FormLabel>
+              <FormLabel>Seu E-mail</FormLabel>
               <Input type="email" onChange={(e) => setEmail(e.target.value)} />
             </FormControl>
             <FormControl id="password">
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Senha</FormLabel>
               <Input
                 type="password"
                 onChange={(e) => setPassword(e.target.value)}
@@ -75,8 +82,8 @@ export default function login() {
                 align={"start"}
                 justify={"space-between"}
               >
-                <Checkbox>Remember me</Checkbox>
-                <Link color={"blue.400"}>Forgot password?</Link>
+                <Checkbox>Lembrar de mim </Checkbox>
+                <Link color={"blue.400"}>Esqueceu a Senha?</Link>
               </Stack>
               <Button
                 bg={"blue.400"}
@@ -86,7 +93,7 @@ export default function login() {
                   bg: "blue.500",
                 }}
               >
-                Sign in
+                Entrar
               </Button>
             </Stack>
           </Stack>

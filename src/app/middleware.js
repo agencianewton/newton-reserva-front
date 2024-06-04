@@ -1,4 +1,5 @@
 // middleware.js
+"use client";
 import { NextResponse } from "next/server";
 
 export function middleware(request) {

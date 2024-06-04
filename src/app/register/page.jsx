@@ -127,7 +127,7 @@ export default function Register() {
               )}
             </FormControl>
             <FormControl id="password" isRequired>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Senha</FormLabel>
               <InputGroup>
                 <Input
                   type={showPassword ? "text" : "password"}
