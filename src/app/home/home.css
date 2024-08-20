@@ -10,6 +10,163 @@
   justify-content: center;
 }
 
+/* styles.css */
+
+.container {
+  /* border: 1px solid #000; */
+  position: relative;
+  width: 2930px;
+  height: 938px;
+  border: 4px solid rgb(0, 0, 0);
+  background-color: #939598;
+}
+
+.container-mesas-esquerda{
+  position: relative;
+
+}
+
+.container-mesas-esquerda::before {
+  content: ""; /* Necessário para gerar o elemento */
+  position: absolute;
+  left: 0px; /* Move a linha 50px para a esquerda, saindo da lateral */
+  top: 70px; /* Ajuste a distância da linha em relação ao fundo do contêiner */
+  width: calc(100% + 100px); /* Faz a linha ocupar toda a largura do contêiner mais 100px (50px de cada lado) */
+  height: 4px;
+  background-color: #000; /* Cor da linha */
+}
+
+.container-varanda-direita {
+  position: relative;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg); /* Para ajustar a orientação do texto */
+  text-align: center;
+  max-width: 40px;
+  min-height: 290px;
+  font-size: 20px;
+  align-items: center;
+  justify-content: center;
+}
+
+.container-varanda-direita::before {
+  content: ""; /* Necessário para gerar o elemento */
+  position: absolute;
+  left: 98px; /* Move a linha 50px para a esquerda, saindo da lateral */
+  top: 734px; /* Ajuste a distância da linha em relação ao fundo do contêiner */
+  width: calc(100% + 50px); /* Faz a linha ocupar toda a largura do contêiner mais 100px (50px de cada lado) */
+  height: 4px;
+  background-color: #000; /* Cor da linha */
+} 
+
+.container-cima-direita {
+  position: relative;
+
+}
+
+.container-cima-direita::before {
+  content: ""; /* Necessário para gerar o elemento */
+  position: absolute;
+  left: -50px; /* Move a linha 50px para a esquerda, saindo da lateral */
+  top: -44px; /* Ajuste a distância da linha em relação ao fundo do contêiner */
+  width: calc(100% + 50px); /* Faz a linha ocupar toda a largura do contêiner mais 100px (50px de cada lado) */
+  height: 4px;
+  background-color: #000; /* Cor da linha */
+}
+
+.container-cima-direita::after {
+  content: ""; /* Necessário para gerar o elemento */
+  position: absolute;
+  left: -2px; /* Move a linha 50px para a esquerda, saindo da lateral */
+  top: -44px; /* Ajuste a distância da linha em relação ao topo do contêiner */
+  height: calc(100% + -563px); /* Faz a linha ocupar toda a altura do contêiner mais 50px do lado esquerdo */
+  width: 4px; /* Largura da linha */
+  background-color: #000; /* Cor da linha */
+}
+
+.container-baixo-direita{
+  position: relative;
+}
+
+.container-baixo-direita::before {
+  content: ""; /* Necessário para gerar o elemento */
+  position: absolute;
+  top: 139px; /* Ajuste a posição da linha a partir do topo do contêiner */
+  left: -133px; /*5 Move a linha 50px para fora da lateral esquerda do contêiner */
+  height: 62%; /* A linha ocupa 60% da altura do contêiner */
+  width: 4px; /* Define a espessura da linha */
+  background-color: #000; /* Cor da linha */
+}
+.container-baixo {
+  position: relative;
+}
+
+.container-baixo::before {
+  content: ""; /* Necessário para gerar o elemento */
+  position: absolute;
+  left: 3px; /* Move a linha 50px para a esquerda, saindo da lateral */
+  bottom: 170px; /* Ajuste a distância da linha em relação ao fundo do contêiner */
+  width: calc(100% + -860px); /* Faz a linha ocupar toda a largura do contêiner mais 100px (50px de cada lado) */
+  height: 3px;
+  background-color: #000; /* Cor da linha */
+}
+
+.mesa {
+  position: relative; /* Garante que os filhos com position absolute se posicionem relativamente a esse elemento */
+  width: 170px;
+  height: 90px;
+  background-size: cover;
+  overflow: visible; /* Permite que a imagem ultrapasse os limites */
+}
+
+.mesa-vertical {
+  position: relative; /* Garante que os filhos com position absolute se posicionem relativamente a esse elemento */
+  width: 170px;
+  height: 90px;
+  background-size: cover;
+  transform: rotate(90deg);
+  overflow: visible; /* Permite que a imagem ultrapasse os limites */
+}
+
+.cadeira {
+  position: absolute; /* Posiciona a imagem de forma absoluta dentro do contêiner pai */
+  top: 70%; /* Ajusta a posição vertical */
+  left: 50%; /* Ajusta a posição horizontal */
+  width: 150%; /* Ajusta o tamanho da imagem */
+  height: 140%; /* Mantém a proporção da imagem */
+  transform: translate(-50%, -50%) rotate(180deg); /* Centraliza a imagem e a rotaciona */
+  clip-path: inset(0 0 90px 0);
+}
+
+.cadeira-padrao {
+  position: absolute; /* Posiciona a imagem de forma absoluta dentro do contêiner pai */
+  top: -37%; /* Ajusta a posição vertical */
+  right: 0%; /* Ajusta a posição horizontal */
+  width: 150%; /* Ajusta o tamanho da imagem */
+  height: 110%; /* Mantém a proporção da imagem */
+  clip-path: inset(0 0 65px 0);
+}
+
+.cadeira-vertical {
+  position: absolute; /* Posiciona a imagem de forma absoluta dentro do contêiner pai */
+  top: 172%; /* Ajusta a posição vertical */
+  left: 50%; /* Ajusta a posição horizontal */
+  width: 150%; /* Ajusta o tamanho da imagem */
+  height: 140%; /* Mantém a proporção da imagem */
+  transform: translate(-50%, -50%) rotate(180deg); /* Centraliza a imagem e a rotaciona */
+  clip-path: inset(0 0 90px 0);
+}
+
+.cadeira-vertical-oposta {
+  position: absolute; /* Posiciona a imagem de forma absoluta dentro do contêiner pai */
+  top: -72%; /* Ajusta a posição vertical */
+  left: 50%; /* Ajusta a posição horizontal */
+  width: 150%; /* Ajusta o tamanho da imagem */
+  height: 140%; /* Mantém a proporção da imagem */
+  transform: translate(-50%, -50%) rotate(0deg); /* Centraliza a imagem e a rotaciona */
+  clip-path: inset(0 0 90px 0);
+}
+
+
 @import "rsuite/dist/rsuite.css";
 
 #root {

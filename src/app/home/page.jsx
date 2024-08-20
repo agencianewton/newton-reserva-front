@@ -32,6 +32,7 @@ import { format } from "date-fns";
 import withAuth from "../components/AuthComponent/withAuth";
 
 import { CalendarIcon } from "@chakra-ui/icons";
+import NavBar from "../components/navBar";
 
 const HomePage = () => {
   const [selectedDate, setSelectedDate] = useState(null);
@@ -44,6 +45,8 @@ const HomePage = () => {
   const [tableReserved, setTableReserved] = useState("");
   const [reserveDate, setReserveDate] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const [roomsAvailability, setRoomsAvailability] = useState([])
+  const [roomID, setRoomID] = useState();
 
   const toast = useToast();
 
@@ -59,10 +62,18 @@ const HomePage = () => {
     }
   };
 
+  const handleClickRoom = (roomID, roomCheck) => {
+    if (roomCheck == true) {
+      alert("Mesa já está reservada");
+    } else {
+      setRoomID(roomID);
+      onOpen();
+    }
+  };
+
   const handleDateChange = (date) => {
     setTableReserved("");
     setStartDate(date);
-
     getInfoDate(date);
   };
 
@@ -83,6 +94,32 @@ const HomePage = () => {
         .then((res) => res.json())
         .then((data) => {
           setTablesAvailability(data.items?.tables);
+          console.log(data.items)
+        })
+        .catch((error) => {
+          console.error("Error fetching data:", error);
+        });
+    }
+  };
+
+  const getInfoRooms = async (id, date) => {
+    if (date) {
+      const formattedDate = format(date, "yyyy-MM-dd");
+      const token = localStorage.getItem("token");
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}room/${id}/${formattedDate}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      )
+        .then((res) => res.json())
+        .then((data) => {
+          setRoomsAvailability(data.items?.tables);
+          console.log(data.items)
         })
         .catch((error) => {
           console.error("Error fetching data:", error);
@@ -136,6 +173,52 @@ const HomePage = () => {
     }
   };
 
+  const reservationRoom = async () => {
+    if (tableType == 1) {
+      setPeriodReserve("dia_todo");
+    }
+
+    const data = {
+      rooms_id: roomID,
+      date: reserveDate,
+      period: periodReserve,
+    };
+    const token = localStorage.getItem("token");
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}reservation/room`,
+      {
+        method: "POST",
+
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      }
+    );
+
+    const responseData = await res.json();
+    if (res.ok) {
+      toast({
+        title: "Reserva realizada com sucesso",
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+      onClose();
+      setStartDate(reserveDate);
+      getInfoRoom(reserveDate);
+    } else {
+      toast({
+        title: "Erro ao reservar",
+        description: responseData.error,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
   useEffect(() => {
     handleDateChange(new Date());
   }, []);
@@ -159,9 +242,9 @@ const HomePage = () => {
         </Stack>
       </Flex>
       {tablesAvailability && (
-        <Flex justifyContent={"center"} alignItems={"center"}>
-          <Box py={12} px={6} boxShadow={"lg"} m={5}>
-            <Flex width={"1500px"} overflowX={"auto"}>
+        <Flex>
+          <Box py={12} px={6} height={"1000px"} boxShadow={"lg"} marginLeft={"-38px"} className={"container"}>
+            <Flex width={"2830px"} height={"780px"} marginTop={"63px"} paddingTop={"20px"} overflowY={"auto"} overflowX={"auto"}>
               <Box display={"block"} minW={"40px"} ml={5}>
                 <Flex justifyContent={"end"}>
                   <Box minH={"25px"}></Box>
@@ -169,103 +252,184 @@ const HomePage = () => {
                 <Grid
                   templateRows="repeat(1, 1fr)"
                   templateColumns="repeat(1, 1fr)"
+                  width={"90px"}
+                  borderRight={"1px"}
+                  marginRight={"8px"}
+                  marginLeft={"-10px"}
+                  marginTop={"196px"}
                 >
                   <GridItem
-                    cursor={"pointer"}
+                  bg={
+                    tablesAvailability["2"]?.availability?.Manha ===
+                      "Livre" &&
+                    tablesAvailability["2"]?.availability?.Tarde === "Livre"
+                      ? "url('/img/varanda_livre.png')"
+                      : "url('/img/varanda_ocupada.png')"
+                  }
+                  backgroundSize={"cover"}
+                  transform={"rotate(360deg)"}
                     className="vertical-text"
                     rowSpan={2}
                     colSpan={1}
-                    border={"4px solid #000"}
-                    maxW={"40px"}
-                    minH={"290px"}
+                    border={"1px solid #000"}
+                    minW={"90px"}
+                    minH={"380px"}
+                    borderLeft={"3px solid"}
+                    onClick={() =>
+                      handleClickRoom(
+                        roomsAvailability["2"]?.rooms_id,
+                        roomsAvailability["2"]?.availability?.Manha ===
+                          "Livre" &&
+                          roomsAvailability["2"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
+                    cursor={
+                      roomsAvailability["2"]?.availability?.Manha ===
+                        "Livre" &&
+                      roomsAvailability["2"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
-                    Varanda{" "}
+                    {roomsAvailability["2"]?.availability?.Manha === "Livre" &&
+                    roomsAvailability["2"]?.availability?.Tarde === "Livre"
+                      ? "Mesa Livre"
+                      : roomsAvailability["2"]?.availability?.Tarde}
                   </GridItem>
                 </Grid>
               </Box>
-              <Box display={"block"} width={"400px"}>
+              <Box display={"block"} width={"500px"} maxH={"100px"} marginTop={"20px"} paddingRight={"50px"}>
                 <Flex justifyContent={"end"} minH={"36px"}>
                   <Box></Box>
                 </Flex>
                 <Grid
                   templateRows="repeat(2, 1fr)"
                   templateColumns="repeat(1, 1fr)"
+                  marginTop={"13px"}
                 >
                   <GridItem
                     cursor={"pointer"}
                     colSpan={2}
                     bg="red"
                     minH={"75px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
+                    height={"300px"}
+                    width={"550px"}
                     p={5}
+                    borderTop={"4px solid"}
+                    borderLeft={"4px solid"}
+                    marginTop={"1px"}
+                    marginLeft={""}
                   >
                     {" "}
                     Sala de Reunião
                   </GridItem>
                 </Grid>
-                <Grid
-                  templateRows="repeat(1, 1fr)"
-                  templateColumns="repeat(4, 1fr)"
-                  mt={9}
-                >
-                  <GridItem colSpan={2} border={"4px solid #000"} minH={"60px"}>
-                    Banheiro
-                  </GridItem>
-                  <GridItem colSpan={2} border={"4px solid #000"} minH={"60px"}>
-                    Copa
-                  </GridItem>
-                </Grid>
               </Box>
 
-              <Box display={"block"} width={"600px"}>
-                <Flex justifyContent={"end"} minH={"36px"}>
-                  <Box border={"4px solid #000"} width={"250px"}>
+              <Box display={"block"} width={"600px"} className="container-mesas-esquerda" marginLeft={"50px"}>
+                <Flex justifyContent={"end"} minH={"90px"} marginRight={"-150px"} marginBottom={"80px"} marginTop={"-20px"}>
+                  <Box 
+                  bg={
+                    tablesAvailability["22"]?.availability?.Manha ===
+                      "Livre" &&
+                    tablesAvailability["22"]?.availability?.Tarde === "Livre"
+                      ? "url('/img/varanda_livre.png')"
+                      : "url('/img/varanda_ocupada.png')"
+                  }
+                  backgroundSize={"cover"}
+                  border={"1px solid #000"} 
+                  width={"380px"}
+                  onClick={() =>
+                    handleClickTable(
+                      tablesAvailability["22"]?.table_id,
+                      tablesAvailability["22"]?.table_type,
+                      tablesAvailability["22"]?.availability?.Manha ===
+                        "Livre" &&
+                        tablesAvailability["22"]?.availability?.Tarde ===
+                          "Livre"
+                        ? false
+                        : true
+                    )
+                  }
+                  cursor={
+                    tablesAvailability["22"]?.availability?.Manha ===
+                      "Livre" &&
+                    tablesAvailability["22"]?.availability?.Tarde === "Livre"
+                      ? "pointer"
+                      : ""
+                  }
+                >
+                  {tablesAvailability["22"]?.availability?.Manha === "Livre" &&
+                  tablesAvailability["22"]?.availability?.Tarde === "Livre"
+                    ? "Mesa Livre"
+                    : tablesAvailability["22"]?.availability?.Tarde}
                     <Text textAlign={"center"}>Varanda</Text>
                   </Box>
                 </Flex>
                 <Grid
                   templateRows="repeat(1, 1fr)"
                   templateColumns="repeat(3, 1fr)"
+                  maxW={"510px"}
+                  paddingLeft={"0px"}
                 >
                   <GridItem
-                    bg="pink"
+                    className="mesa"
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
+                    bg={"url('/img/mesa_DP-financ.png')"}
+                    backgroundPosition= "center"
                   >
+                    <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
+                    DP/Financ: Adelia{" "}
+                    
+                  </GridItem>
+                  <GridItem
+                   className="mesa"
+                   minH={"40px"}
+                   border={"1px solid #000"}
+                   p={5}
+                   bg={"url('/img/mesa_DP-financ.png')"}
+                   backgroundPosition= "center"
+                  >
+                    <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     DP/Financ: Adelia{" "}
                   </GridItem>
                   <GridItem
-                    bg="pink"
+                    className="mesa"
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
+                    bg={"url('/img/mesa_DP-financ.png')"}
+                    backgroundPosition= "center"
                   >
+                    <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     DP/Financ: Adelia{" "}
-                  </GridItem>
-                  <GridItem
-                    bg="pink"
-                    minH={"40px"}
-                    border={"4px solid #000"}
-                    p={5}
-                  >
-                    DP/Financ: Adelia{" "}
+                    
                   </GridItem>
                 </Grid>
                 <Grid
                   templateRows="repeat(1, 1fr)"
                   templateColumns="repeat(3, 1fr)"
+                  maxW={"510px"}
+                  marginRight={"0px"}
                 >
                   <GridItem
                     bg={
                       tablesAvailability["1"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["1"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
+                        ? "url('/img/mesa_livre.png')"
+                        : "url('/img/mesa_ocupada.png')"
                     }
+                    className="mesa"
+                    backgroundPosition= "center"
                     minH={"40px"}
-                    border={"2px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
                     onClick={() =>
                       handleClickTable(
@@ -287,19 +451,23 @@ const HomePage = () => {
                         : ""
                     }
                   >
+                    
                     {tablesAvailability["1"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["1"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
                       : tablesAvailability["1"]?.availability?.Tarde}
+                      <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
                   </GridItem>
                   <GridItem
                     bg={
                       tablesAvailability["2"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["2"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
+                        ? "url('/img/mesa_livre.png')"
+                        : "url('/img/mesa_ocupada.png')"
                     }
+                    className="mesa"
+                    backgroundPosition= "center"
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["2"]?.table_id,
@@ -320,22 +488,25 @@ const HomePage = () => {
                         : ""
                     }
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
                   >
                     {tablesAvailability["2"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["2"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
                       : tablesAvailability["2"]?.availability?.Tarde}
+                      <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
                   </GridItem>
                   <GridItem
                     bg={
                       tablesAvailability["3"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["3"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
+                        ? "url('/img/mesa_livre.png')"
+                        : "url('/img/mesa_ocupada.png')"
                     }
+                    className="mesa"
+                    backgroundPosition= "center"
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["3"]?.table_id,
@@ -356,26 +527,44 @@ const HomePage = () => {
                         : ""
                     }
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
                   >
                     {tablesAvailability["3"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["3"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
                       : tablesAvailability["3"]?.availability?.Tarde}
+                      <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
                   </GridItem>
                 </Grid>
               </Box>
 
-              <Box display={"block"} width={"900px"}>
+              <Box display={"block"} width={"1000px"} className="container-mesas-esquerda">
                 <Flex justifyContent={"start"}>
-                  <Box border={"4px solid #000"} width={"249px"} minH={"36px"}>
+                  <Box 
+                   bg={
+                    tablesAvailability["22"]?.availability?.Manha ===
+                      "Livre" &&
+                    tablesAvailability["22"]?.availability?.Tarde === "Livre"
+                      ? "url('/img/varanda_livre.png')"
+                      : "url('/img/varanda_ocupada.png')"
+                  }
+                  backgroundSize={"cover"}
+                  border={"1px solid #000"} 
+                  width={"380px"} 
+                  minH={"90px"} 
+                  marginLeft={"150px"} 
+                  marginTop={"-20px"} 
+                  marginBottom={"80px"}
+                  >
                     <Text textAlign={"center"}>Varanda</Text>
                   </Box>
                 </Flex>
                 <Grid
                   templateRows="repeat(1, 1fr)"
                   templateColumns="repeat(5, 1fr)"
+                  maxW={"680px"}
+                  marginLeft={"300px"}
                 >
                   <GridItem></GridItem>
                   <GridItem
@@ -383,9 +572,11 @@ const HomePage = () => {
                       tablesAvailability["4"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["4"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
+                        ? "url('/img/mesa_DA_livre_1.png')"
+                        : "url('/img/mesa_ocupada.png')"
                     }
+                    className="mesa"
+                    backgroundPosition= "center"
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["4"]?.table_id,
@@ -406,9 +597,10 @@ const HomePage = () => {
                         : ""
                     }
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
                   >
+                    <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["4"]?.table_name}
                   </GridItem>
                   <GridItem
@@ -416,23 +608,25 @@ const HomePage = () => {
                       tablesAvailability["5"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["5"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
-                    }
-                    onClick={() =>
-                      handleClickTable(
-                        tablesAvailability["5"]?.table_id,
-                        tablesAvailability["5"]?.table_type,
-                        tablesAvailability["5"]?.availability?.Manha ===
-                          "Livre" &&
-                          tablesAvailability["5"]?.availability?.Tarde ===
-                            "Livre"
-                          ? false
-                          : true
+                      ? "url('/img/mesa_livre.png')"
+                      : "url('/img/mesa_ocupada.png')"
+                  }
+                  className="mesa"
+                  backgroundPosition= "center"
+                  onClick={() =>
+                    handleClickTable(
+                      tablesAvailability["5"]?.table_id,
+                      tablesAvailability["5"]?.table_type,
+                      tablesAvailability["5"]?.availability?.Manha ===
+                        "Livre" &&
+                        tablesAvailability["5"]?.availability?.Tarde ===
+                          "Livre"
+                        ? false
+                        : true
                       )
                     }
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
                     cursor={
                       tablesAvailability["5"]?.availability?.Manha ===
@@ -442,6 +636,7 @@ const HomePage = () => {
                         : ""
                     }
                   >
+                    <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["5"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["5"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
@@ -452,9 +647,11 @@ const HomePage = () => {
                       tablesAvailability["6"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["6"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
-                    }
+                      ? "url('/img/mesa_DA_livre_2.png')"
+                      : "url('/img/mesa_ocupada.png')"
+                  }
+                  className="mesa"
+                  backgroundPosition= "center"
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["6"]?.table_id,
@@ -468,7 +665,7 @@ const HomePage = () => {
                       )
                     }
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
                     cursor={
                       tablesAvailability["6"]?.availability?.Manha ===
@@ -478,6 +675,7 @@ const HomePage = () => {
                         : ""
                     }
                   >
+                    <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["6"]?.table_name}
                   </GridItem>
                   <GridItem
@@ -485,9 +683,11 @@ const HomePage = () => {
                       tablesAvailability["7"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["7"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
-                    }
+                      ? "url('/img/mesa_livre.png')"
+                      : "url('/img/mesa_ocupada.png')"
+                  }
+                  className="mesa"
+                  backgroundPosition= "center"
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["7"]?.table_id,
@@ -501,7 +701,7 @@ const HomePage = () => {
                       )
                     }
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
                     cursor={
                       tablesAvailability["7"]?.availability?.Manha ===
@@ -511,6 +711,7 @@ const HomePage = () => {
                         : ""
                     }
                   >
+                    <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["7"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["7"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
@@ -520,6 +721,8 @@ const HomePage = () => {
                 <Grid
                   templateRows="repeat(1, 1fr)"
                   templateColumns="repeat(5, 1fr)"
+                  maxW={"680px"}
+                  marginLeft={"300px"}
                 >
                   <GridItem></GridItem>
                   <GridItem
@@ -527,9 +730,11 @@ const HomePage = () => {
                       tablesAvailability["8"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["8"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
+                      ? "url('/img/mesa_DA_livre_3.png')"
+                      : "url('/img/mesa_ocupada.png')"
                     }
+                  className="mesa"
+                  backgroundPosition= "center"
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["8"]?.table_id,
@@ -543,7 +748,7 @@ const HomePage = () => {
                       )
                     }
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
                     cursor={
                       tablesAvailability["8"]?.availability?.Manha ===
@@ -553,6 +758,7 @@ const HomePage = () => {
                         : ""
                     }
                   >
+                    <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["8"]?.table_name}
                   </GridItem>
                   <GridItem
@@ -560,9 +766,11 @@ const HomePage = () => {
                       tablesAvailability["9"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["9"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
+                      ? "url('/img/mesa_livre.png')"
+                      : "url('/img/mesa_ocupada.png')"
                     }
+                  className="mesa"
+                  backgroundPosition= "center"
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["9"]?.table_id,
@@ -576,7 +784,7 @@ const HomePage = () => {
                       )
                     }
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
                     cursor={
                       tablesAvailability["9"]?.availability?.Manha ===
@@ -586,6 +794,7 @@ const HomePage = () => {
                         : ""
                     }
                   >
+                    <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["9"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["9"]?.availability?.Tarde === "Livre"
                       ? "Mesa Livre"
@@ -596,9 +805,11 @@ const HomePage = () => {
                       tablesAvailability["10"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["10"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
+                      ? "url('/img/mesa_DA_livre_4.png')"
+                      : "url('/img/mesa_ocupada.png')"
                     }
+                  className="mesa"
+                  backgroundPosition= "center"
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["10"]?.table_id,
@@ -612,7 +823,7 @@ const HomePage = () => {
                       )
                     }
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={2}
                     cursor={
                       tablesAvailability["10"]?.availability?.Manha ===
@@ -622,6 +833,7 @@ const HomePage = () => {
                         : ""
                     }
                   >
+                    <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["10"]?.table_name}
                   </GridItem>
                   <GridItem
@@ -629,9 +841,11 @@ const HomePage = () => {
                       tablesAvailability["11"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["11"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
+                      ? "url('/img/mesa_livre.png')"
+                      : "url('/img/mesa_ocupada.png')"
                     }
+                  className="mesa"
+                  backgroundPosition= "center"
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["11"]?.table_id,
@@ -645,7 +859,7 @@ const HomePage = () => {
                       )
                     }
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={2}
                     cursor={
                       tablesAvailability["11"]?.availability?.Manha ===
@@ -655,6 +869,7 @@ const HomePage = () => {
                         : ""
                     }
                   >
+                    <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["11"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["11"]?.availability?.Tarde === "Livre"
@@ -663,7 +878,7 @@ const HomePage = () => {
                   </GridItem>
                 </Grid>
               </Box>
-              <Box display={"block"} ml={5}>
+              <Box display={"block"} ml={5} marginTop={"114px"} marginLeft={"0px"} className="container-cima-direita">
                 <Flex justifyContent={"end"} minH={"36px"}>
                   <Box></Box>
                 </Flex>
@@ -672,11 +887,14 @@ const HomePage = () => {
                   templateColumns="repeat(4, 1fr)"
                 >
                   <GridItem
-                    bg="yellow"
+                    className="mesa"
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
+                    bg={"url('/img/mesa_socio_victor.png')"}
+                    backgroundPosition= "center"
                   >
+                    <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     Victor{" "}
                   </GridItem>
                   <GridItem
@@ -684,9 +902,11 @@ const HomePage = () => {
                       tablesAvailability["12"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["12"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
+                      ? "url('/img/mesa_livre.png')"
+                      : "url('/img/mesa_ocupada.png')"
                     }
+                    className="mesa"
+                    backgroundPosition= "center"
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["12"]?.table_id,
@@ -700,7 +920,7 @@ const HomePage = () => {
                       )
                     }
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
                     cursor={
                       tablesAvailability["12"]?.availability?.Manha ===
@@ -710,6 +930,7 @@ const HomePage = () => {
                         : ""
                     }
                   >
+                    <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["12"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["12"]?.availability?.Tarde === "Livre"
@@ -717,19 +938,25 @@ const HomePage = () => {
                       : tablesAvailability["12"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
-                    bg="yellow"
+                    className="mesa"
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
+                    bg={"url('/img/mesa_socio_patty.png')"}
+                    backgroundPosition= "center"
                   >
+                    <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     Patty{" "}
                   </GridItem>
                   <GridItem
-                    bg="blue"
+                    className="mesa"
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
+                    bg={"url('/img/mesa_socio_ellen.png')"}
+                    backgroundPosition= "center"
                   >
+                    <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     Ellen{" "}
                   </GridItem>
                 </Grid>
@@ -742,9 +969,11 @@ const HomePage = () => {
                       tablesAvailability["13"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["13"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
+                      ? "url('/img/mesa_livre.png')"
+                      : "url('/img/mesa_ocupada.png')"
                     }
+                    className="mesa"
+                    backgroundPosition= "center"  
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["13"]?.table_id,
@@ -758,7 +987,7 @@ const HomePage = () => {
                       )
                     }
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
                     cursor={
                       tablesAvailability["13"]?.availability?.Manha ===
@@ -768,6 +997,7 @@ const HomePage = () => {
                         : ""
                     }
                   >
+                    <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["13"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["13"]?.availability?.Tarde === "Livre"
@@ -779,9 +1009,11 @@ const HomePage = () => {
                       tablesAvailability["14"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["14"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
+                      ? "url('/img/mesa_livre.png')"
+                      : "url('/img/mesa_ocupada.png')"
                     }
+                    className="mesa"
+                    backgroundPosition= "center"
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["14"]?.table_id,
@@ -795,7 +1027,7 @@ const HomePage = () => {
                       )
                     }
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
                     cursor={
                       tablesAvailability["14"]?.availability?.Manha ===
@@ -805,6 +1037,7 @@ const HomePage = () => {
                         : ""
                     }
                   >
+                    <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["14"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["14"]?.availability?.Tarde === "Livre"
@@ -816,9 +1049,11 @@ const HomePage = () => {
                       tablesAvailability["15"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["15"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
+                      ? "url('/img/mesa_livre.png')"
+                      : "url('/img/mesa_ocupada.png')"
                     }
+                    className="mesa"
+                    backgroundPosition= "center"
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["15"]?.table_id,
@@ -832,7 +1067,7 @@ const HomePage = () => {
                       )
                     }
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
                     cursor={
                       tablesAvailability["15"]?.availability?.Manha ===
@@ -842,6 +1077,7 @@ const HomePage = () => {
                         : ""
                     }
                   >
+                    <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["15"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["15"]?.availability?.Tarde === "Livre"
@@ -853,9 +1089,11 @@ const HomePage = () => {
                       tablesAvailability["16"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["16"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
+                      ? "url('/img/mesa_livre.png')"
+                      : "url('/img/mesa_ocupada.png')"
                     }
+                    className="mesa"
+                    backgroundPosition= "center"
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["16"]?.table_id,
@@ -869,7 +1107,7 @@ const HomePage = () => {
                       )
                     }
                     minH={"40px"}
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
                     cursor={
                       tablesAvailability["16"]?.availability?.Manha ===
@@ -879,6 +1117,7 @@ const HomePage = () => {
                         : ""
                     }
                   >
+                    <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["16"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["16"]?.availability?.Tarde === "Livre"
@@ -888,48 +1127,125 @@ const HomePage = () => {
                 </Grid>
               </Box>
             </Flex>
-            <Flex width={"1550px"} overflowX={"auto"}>
-              <Box display={"block"} minW={"40px"} ml={5}>
-                {" "}
+            <Flex width={"2900px"} overflow={"visible"} marginTop={"-150px"} marginLeft={"100px"} className="container-baixo">
+            <Grid
+                  templateRows="repeat(1, 1fr)"
+                  templateColumns="repeat(4, 1fr)"
+                  minW={"500px"}
+                  mt={"-10px"}
+                >
+                  <GridItem 
+                  colSpan={2} 
+                  border={"1px solid #000"} 
+                  borderLeft={"4px"} 
+                  marginLeft={"-3px"} 
+                  minW={"200px"} 
+                  maxH={"110px"}
+                  bg={"url('/img/banheiro_canto_esquerdo.png')"}
+                  backgroundSize={'230px 110px'}
+                  backgroundRepeat={'no-repeat'}
+                  >
+                    Banheiro
+                  </GridItem>
+                  <GridItem 
+                  colSpan={2} 
+                  border={"0px solid #000"} 
+                  marginLeft={"0px"} 
+                  w={"270px"} 
+                  maxH={"130px"}
+                  bg={"url('/img/cozinha.png')"}
+                  backgroundSize={'240px 107px'}
+                  backgroundRepeat={'no-repeat'}
+                  >
+                    Copa
+                  </GridItem>
+                </Grid>
+              <Box display={"block"} minW={"40px"}>
               </Box>
 
-              <Box display={"block"} minW={"200px"} mt={5}>
+              <Box display={"block"} minW={"200px"} marginLeft={"-50px"} mt={5}>
                 <Grid
                   templateRows="repeat(1, 1fr)"
                   templateColumns="repeat(1, 1fr)"
                 >
-                  <GridItem bg="red" minH={"80px"}>
-                    {" "}
+                  <GridItem borderRight={"1px"} minH={"80px"} maxW={"100px"}>
                     ENTRADA{" "}
                   </GridItem>
                 </Grid>
               </Box>
-              <Box display={"block"} width={"100%"} mt={5} ml={9}>
+              <Box display={"block"} width={"100%"} mt={"-100px"} ml={"400px"}>
                 <Grid
                   templateRows="repeat(1, 1fr)"
                   templateColumns="repeat(6, 1fr)"
+                  marginLeft={"-10px"}
+                  width={"240px"}
                 >
-                  <GridItem border={"4px solid #000"} p={5} minH={"40px"}>
+                  <GridItem 
+                  border={"1px solid #000"} 
+                  p={5} 
+                  minW={"140px"} 
+                  minH={"200px"}
+                  bg={"url('/img/banheiro_centro.png')"}
+                  backgroundSize={'140px 195px'}
+                  backgroundRepeat={'no-repeat'}
+                  >
                     Banheiro
                   </GridItem>
-                  <GridItem border={"4px solid #000"} p={5} minH={"40px"}>
+                  <GridItem 
+                  border={"1px solid #000"} 
+                  p={5} 
+                  minW={"140px"} 
+                  minH={"200px"}
+                  bg={"url('/img/banheiro_centro.png')"}
+                  backgroundSize={'140px 195px'}
+                  backgroundRepeat={'no-repeat'}
+                  transform={'scaleX(-1)'}
+                  >
                     Banheiro
                   </GridItem>
                   <GridItem
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
+                    borderBottom={"1px solid"}
                     p={5}
-                    minH={"40px"}
-                    bg={"#ccc"}
+                    className="mesa"
+                    mt="108px"
+                    bg={"url('/img/mesa_maquina.png')"}
+                    backgroundPosition= "center"
                   >
+                   <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     Máquina BI
                   </GridItem>
-                  <GridItem border={"4px solid #000"} p={5} minH={"40px"}>
+                  <GridItem 
+                  className="mesa"
+                  border={"1px solid #000"}
+                  mt="108px"
+                  p={5}
+                  bg={"url('/img/mesa_rotativo.png')"}
+                  backgroundPosition= "center"
+                  >
+                  <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     Rotativo
                   </GridItem>
-                  <GridItem border={"4px solid #000"} p={5} minH={"40px"}>
+                  <GridItem 
+                  className="mesa"
+                  border={"1px solid #000"}
+                  mt="108px"
+                  p={5}
+                  bg={"url('/img/mesa_rotativo.png')"}
+                  backgroundPosition= "center"
+                  >
+                  <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     Rotativo
                   </GridItem>
-                  <GridItem border={"4px solid #000"} p={5} minH={"40px"}>
+                  <GridItem 
+                  className="mesa"
+                  border={"1px solid #000"}
+                  mt="108px"
+                  p={5}
+                  bg={"url('/img/mesa_rotativo.png')"}
+                  backgroundPosition= "center"
+                  >
+                  <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     Rotativo
                   </GridItem>
                 </Grid>
@@ -939,15 +1255,21 @@ const HomePage = () => {
                 <Grid
                   templateRows="repeat(1, 1fr)"
                   templateColumns="repeat(2, 1fr)"
+                  height={"255px"}
+                  marginRight={"140px"}
+                  marginTop={"-60px"}
+                  className="container-baixo-direita"
                 >
                   <GridItem
                     bg={
                       tablesAvailability["17"]?.availability?.Manha ===
                         "Livre" &&
                       tablesAvailability["17"]?.availability?.Tarde === "Livre"
-                        ? "green"
-                        : "red"
+                      ? "url('/img/mesa_livre.png')"
+                      : "url('/img/mesa_ocupada.png')"
                     }
+                    className="mesa-vertical"
+                    backgroundPosition= "center"
                     onClick={() =>
                       handleClickTable(
                         tablesAvailability["17"]?.table_id,
@@ -967,10 +1289,11 @@ const HomePage = () => {
                         ? "pointer"
                         : ""
                     }
-                    minH={"40px"}
-                    border={"4px solid #000"}
+                    minH={"45px"}
+                    border={"1px solid #000"}
                     p={5}
                   >
+                    <img className="cadeira-vertical-oposta" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["17"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["17"]?.availability?.Tarde === "Livre"
@@ -978,28 +1301,39 @@ const HomePage = () => {
                       : tablesAvailability["17"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
-                    bg={"yellow"}
-                    minH={"40px"}
-                    border={"4px solid #000"}
+                    minH={"45px"}
+                    border={"1px solid #000"}
                     p={5}
+                    className="mesa-vertical"
+                    marginLeft={"-80px"}
+                    bg={"url('/img/mesa_socio_brunno.png')"}
+                    backgroundPosition= "center"
                   >
+                    <img className="cadeira-vertical" src="/img/mesa_com_sombra.png"></img>
                     Brunno{" "}
                   </GridItem>
                   <GridItem
-                    bg={"yellow"}
-                    minH={"40px"}
-                    border={"4px solid #000"}
+                    minH={"45px"}
+                    border={"1px solid #000"}
                     p={5}
+                    className="mesa-vertical"
+                    bg={"url('/img/mesa_socio_thais.png')"}
+                    backgroundPosition= "center"
                   >
+                    <img className="cadeira-vertical-oposta" src="/img/mesa_com_sombra.png"></img>
                     Thais{" "}
                   </GridItem>
 
                   <GridItem
-                    bg={"yellow"}
-                    minH={"40px"}
-                    border={"4px solid #000"}
+                    minH={"45px"}
+                    border={"1px solid #000"}
                     p={5}
+                    className="mesa-vertical"
+                    marginLeft={"-80px"}
+                    bg={"url('/img/mesa_socio_ton.png')"}
+                    backgroundPosition= "center"
                   >
+                    <img className="cadeira-vertical" src="/img/mesa_com_sombra.png"></img>
                     Ton{" "}
                   </GridItem>
                 </Grid>
@@ -1008,13 +1342,23 @@ const HomePage = () => {
                 <Grid
                   templateRows="repeat(2, 1fr)"
                   templateColumns="repeat(1, 1fr)"
+                  marginRight={"160px"}
+                  marginTop={"50px"}
+                  height={"200px"}
+                  width={"100px"}
                 >
-                  <GridItem minH={"40px"} />
+                  <GridItem minW={"100px"} />
                   <GridItem
-                    border={"4px solid #000"}
+                    border={"1px solid #000"}
                     p={5}
-                    minH={"76px"}
-                    mt={2}
+                    H={"120px"}
+                    w={"230px"}
+                    mt={"-35px"}
+                    mr={"-115px"}
+                    mb={"15px"}
+                    bg={"url('/img/banheiro_canto_direito.png')"}
+                    backgroundSize={'225px 120px'}
+                    backgroundRepeat={'no-repeat'}
                   >
                     Banheiro
                   </GridItem>
@@ -1026,13 +1370,23 @@ const HomePage = () => {
                   templateColumns="repeat(1, 1fr)"
                 >
                   <GridItem
+                     bg={
+                    tablesAvailability["22"]?.availability?.Manha ===
+                      "Livre" &&
+                    tablesAvailability["22"]?.availability?.Tarde === "Livre"
+                      ? "url('/img/varanda_livre.png')"
+                      : "url('/img/varanda_ocupada.png')"
+                  }
+                  backgroundSize={"cover"}
                     cursor={"pointer"}
-                    className="vertical-text"
+                    className="container-varanda-direita"
                     rowSpan={2}
                     colSpan={1}
-                    border={"4px solid #000"}
-                    maxW={"40px"}
-                    minH={"290px"}
+                    border={"1px solid #000"}
+                    minW={"100px"}
+                    minH={"400px"}
+                    marginTop={"-200px"}
+                    marginLeft={"-8"}
                   >
                     Varanda{" "}
                   </GridItem>
