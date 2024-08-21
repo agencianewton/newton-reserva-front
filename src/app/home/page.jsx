@@ -260,9 +260,9 @@ const HomePage = () => {
                 >
                   <GridItem
                   bg={
-                    tablesAvailability["2"]?.availability?.Manha ===
+                    roomsAvailability["2"]?.availability?.Manha ===
                       "Livre" &&
-                    tablesAvailability["2"]?.availability?.Tarde === "Livre"
+                    roomsAvailability["2"]?.availability?.Tarde === "Livre"
                       ? "url('/img/varanda_livre.png')"
                       : "url('/img/varanda_ocupada.png')"
                   }

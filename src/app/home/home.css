@@ -1,6 +1,6 @@
 .vertical-text {
   writing-mode: vertical-rl;
-  transform: rotate(180deg); /* Para ajustar a orientação do texto */
+  transform: rotate(180deg);
   text-align: center;
   max-width: 40px;
   min-height: 290px;
@@ -27,19 +27,19 @@
 }
 
 .container-mesas-esquerda::before {
-  content: ""; /* Necessário para gerar o elemento */
+  content: "";
   position: absolute;
-  left: 0px; /* Move a linha 50px para a esquerda, saindo da lateral */
-  top: 70px; /* Ajuste a distância da linha em relação ao fundo do contêiner */
-  width: calc(100% + 100px); /* Faz a linha ocupar toda a largura do contêiner mais 100px (50px de cada lado) */
+  left: 0px; 
+  top: 70px; 
+  width: calc(100% + 100px); 
   height: 4px;
-  background-color: #000; /* Cor da linha */
+  background-color: #000; 
 }
 
 .container-varanda-direita {
   position: relative;
   writing-mode: vertical-rl;
-  transform: rotate(180deg); /* Para ajustar a orientação do texto */
+  transform: rotate(180deg); 
   text-align: center;
   max-width: 40px;
   min-height: 290px;
@@ -64,23 +64,23 @@
 }
 
 .container-cima-direita::before {
-  content: ""; /* Necessário para gerar o elemento */
+  content: "";
   position: absolute;
-  left: -50px; /* Move a linha 50px para a esquerda, saindo da lateral */
-  top: -44px; /* Ajuste a distância da linha em relação ao fundo do contêiner */
-  width: calc(100% + 50px); /* Faz a linha ocupar toda a largura do contêiner mais 100px (50px de cada lado) */
+  left: -50px; 
+  top: -44px; 
+  width: calc(100% + 50px); 
   height: 4px;
-  background-color: #000; /* Cor da linha */
+  background-color: #000; 
 }
 
 .container-cima-direita::after {
-  content: ""; /* Necessário para gerar o elemento */
+  content: ""; 
   position: absolute;
-  left: -2px; /* Move a linha 50px para a esquerda, saindo da lateral */
-  top: -44px; /* Ajuste a distância da linha em relação ao topo do contêiner */
-  height: calc(100% + -563px); /* Faz a linha ocupar toda a altura do contêiner mais 50px do lado esquerdo */
-  width: 4px; /* Largura da linha */
-  background-color: #000; /* Cor da linha */
+  left: -2px;
+  top: -44px; 
+  height: calc(100% + -563px); 
+  width: 4px; 
+  background-color: #000;
 }
 
 .container-baixo-direita{
@@ -88,81 +88,81 @@
 }
 
 .container-baixo-direita::before {
-  content: ""; /* Necessário para gerar o elemento */
+  content: "";
   position: absolute;
-  top: 139px; /* Ajuste a posição da linha a partir do topo do contêiner */
-  left: -133px; /*5 Move a linha 50px para fora da lateral esquerda do contêiner */
-  height: 62%; /* A linha ocupa 60% da altura do contêiner */
-  width: 4px; /* Define a espessura da linha */
-  background-color: #000; /* Cor da linha */
+  top: 139px; 
+  left: -133px; 
+  height: 62%; 
+  width: 4px; 
+  background-color: #000; 
 }
 .container-baixo {
   position: relative;
 }
 
 .container-baixo::before {
-  content: ""; /* Necessário para gerar o elemento */
+  content: "";
   position: absolute;
-  left: 3px; /* Move a linha 50px para a esquerda, saindo da lateral */
-  bottom: 170px; /* Ajuste a distância da linha em relação ao fundo do contêiner */
-  width: calc(100% + -860px); /* Faz a linha ocupar toda a largura do contêiner mais 100px (50px de cada lado) */
+  left: 3px; 
+  bottom: 170px; 
+  width: calc(100% + -860px); 
   height: 3px;
-  background-color: #000; /* Cor da linha */
+  background-color: #000; 
 }
 
 .mesa {
-  position: relative; /* Garante que os filhos com position absolute se posicionem relativamente a esse elemento */
+  position: relative; 
   width: 170px;
   height: 90px;
   background-size: cover;
-  overflow: visible; /* Permite que a imagem ultrapasse os limites */
+  overflow: visible; 
 }
 
 .mesa-vertical {
-  position: relative; /* Garante que os filhos com position absolute se posicionem relativamente a esse elemento */
+  position: relative;
   width: 170px;
   height: 90px;
   background-size: cover;
   transform: rotate(90deg);
-  overflow: visible; /* Permite que a imagem ultrapasse os limites */
+  overflow: visible;
 }
 
 .cadeira {
-  position: absolute; /* Posiciona a imagem de forma absoluta dentro do contêiner pai */
-  top: 70%; /* Ajusta a posição vertical */
-  left: 50%; /* Ajusta a posição horizontal */
-  width: 150%; /* Ajusta o tamanho da imagem */
-  height: 140%; /* Mantém a proporção da imagem */
-  transform: translate(-50%, -50%) rotate(180deg); /* Centraliza a imagem e a rotaciona */
+  position: absolute; 
+  top: 70%; 
+  left: 50%; 
+  width: 150%; 
+  height: 140%; 
+  transform: translate(-50%, -50%) rotate(180deg);
   clip-path: inset(0 0 90px 0);
 }
 
 .cadeira-padrao {
-  position: absolute; /* Posiciona a imagem de forma absoluta dentro do contêiner pai */
-  top: -37%; /* Ajusta a posição vertical */
-  right: 0%; /* Ajusta a posição horizontal */
-  width: 150%; /* Ajusta o tamanho da imagem */
-  height: 110%; /* Mantém a proporção da imagem */
+  position: absolute; 
+  top: -37%; 
+  right: 0%; 
+  width: 150%; 
+  height: 110%;
   clip-path: inset(0 0 65px 0);
 }
 
 .cadeira-vertical {
-  position: absolute; /* Posiciona a imagem de forma absoluta dentro do contêiner pai */
-  top: 172%; /* Ajusta a posição vertical */
-  left: 50%; /* Ajusta a posição horizontal */
-  width: 150%; /* Ajusta o tamanho da imagem */
-  height: 140%; /* Mantém a proporção da imagem */
-  transform: translate(-50%, -50%) rotate(180deg); /* Centraliza a imagem e a rotaciona */
+  position: absolute;
+  top: 172%; 
+  left: 50%; 
+  width: 150%; 
+  height: 140%; 
+  transform: translate(-50%, -50%) rotate(180deg); 
   clip-path: inset(0 0 90px 0);
 }
 
 .cadeira-vertical-oposta {
-  position: absolute; /* Posiciona a imagem de forma absoluta dentro do contêiner pai */
-  top: -72%; /* Ajusta a posição vertical */
-  left: 50%; /* Ajusta a posição horizontal */
-  width: 150%; /* Ajusta o tamanho da imagem */
-  height: 140%; /* Mantém a proporção da imagem */
-  transform: translate(-50%, -50%) rotate(0deg); /* Centraliza a imagem e a rotaciona */
+  position: absolute; 
+  top: -72%; 
+  left: 50%; 
+  width: 150%; 
+  height: 140%; 
+  transform: translate(-50%, -50%) rotate(0deg);
   clip-path: inset(0 0 90px 0);
 }
 
