@@ -24,15 +24,17 @@ import {
   ModalBody,
   ModalCloseButton,
   useDisclosure,
+  Select,
 } from "@chakra-ui/react";
 import "./home.css";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { format } from "date-fns";
+import { format, setDate } from "date-fns";
 import withAuth from "../components/AuthComponent/withAuth";
 
 import { CalendarIcon } from "@chakra-ui/icons";
 import NavBar from "../components/navBar";
+import { relative } from "path";
 
 const HomePage = () => {
   const [selectedDate, setSelectedDate] = useState(null);
@@ -41,17 +43,43 @@ const HomePage = () => {
   const [tablesAvailability, setTablesAvailability] = useState([]);
   const [tableID, setTableID] = useState();
   const [tableType, setTableType] = useState();
-  const [periodReserve, setPeriodReserve] = useState("dia_todo");
+  const [periodReserve, setPeriodReserve] = useState("");
   const [tableReserved, setTableReserved] = useState("");
   const [reserveDate, setReserveDate] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [roomsAvailability, setRoomsAvailability] = useState([])
-  const [roomID, setRoomID] = useState();
+  const [roomsAvailability, setRoomsAvailability] = useState([]);
+  const [conferenceRoomID, setConferenceRoomID] = useState();
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [roomsReserved, setRoomsReserved] = useState([]);
+  const [isModalOneOpen, setModalOneOpen] = useState(false);
+  const [availableStartHours, setAvailableStartHours] = useState([]);
+  const [availableEndHours, setAvailableEndHours] = useState([]);
+  const [reservedHours, setReservedHours] = useState([]);
+  const [dateReserve, setDateReserve] = useState(null);
+  const [filteredStartHours, setFilteredStartHours] = useState([]);
+  const [filteredEndHours, setFilteredEndHours] = useState([]);
+  const [defaultEndHours, setDefaultEndHours] = useState([]);
+  const [defaultStartHours, setDefaultStartHours] = useState([]);
+
+  const openModalOne = () => setModalOneOpen(true);
+
+  const handleModalClose = () => {
+    // Redefine os valores dos selects ao fechar o modal
+    setStartTime("");
+    setEndTime("");
+    setModalOneOpen(false);  // Chama a função onClose para fechar o modal
+  };
 
   const toast = useToast();
 
   const handleClickTable = (tableID, tableType, tableCheck) => {
-    if (tableCheck == true) {
+      if (tableID == 18 || tableID == 19 || tableID == 20) {
+        setTableID(tableID);
+        setTableType(tableType);
+        onOpen();
+      }
+      else if (tableCheck == true) {
       alert("Mesa já está reservada");
     } else if (tableID == 4 || tableID == 6 || tableID == 8 || tableID == 10) {
       alert("Você não tem permissão para agendar nessas mesas");
@@ -62,21 +90,130 @@ const HomePage = () => {
     }
   };
 
-  const handleClickRoom = (roomID, roomCheck) => {
-    if (roomCheck == true) {
-      alert("Mesa já está reservada");
-    } else {
-      setRoomID(roomID);
-      onOpen();
+  const filterRooms = async (id) => {
+     // Redefine os estados de horários disponíveis
+     setFilteredStartHours([]);
+     setFilteredEndHours([]);
+     setReservedHours([]);  // Redefine o estado de reservas, se necessário
+     let date = startDate; // Data selecionada no modal
+     console.log("passou no filterrooms: ", date)
+     await reservesRoom(id, date);
+     await availableSlots();
+    console.log(reservedHours)
+     setConferenceRoomID(id);
+ 
+     // Filtra os horários disponíveis com base nas reservas e horários selecionados
+     const { filteredStartHours, filteredEndHours } = filterAvailableTimes(reservedHours, availableStartHours, availableEndHours);
+     setDefaultEndHours(filteredEndHours);
+     setDefaultStartHours(filteredStartHours);
+ 
+     // Atualiza os estados com os horários filtrados
+     setFilteredStartHours(filteredStartHours);
+     setFilteredEndHours(filteredEndHours);
+
+     console.log("arrays: ", filteredStartHours, filteredEndHours);
+  }
+
+  const handleClickRoom = async (id) => {
+    try {
+      setStartTime(""); // Reseta o horário de início
+      setEndTime(""); // Reseta o horário de fim
+      filterRooms(id);
+      setDateReserve(startDate);
+      if (filteredStartHours.length > 0 || filteredEndHours.length > 0) {
+        setTimeout(() => {
+          openModalOne();
+        }, 300);
+          
+      } else {
+        console.error("Horários não foram filtrados corretamente.");
+      }
+    } catch (error) {
+      console.error("Erro ao processar a reserva:", error);
     }
   };
 
-  const handleDateChange = (date) => {
+  const getReservationRoom = async (id, date) => {
+    if (date) {
+      const formattedDate = format(date, "yyyy-MM-dd");
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}room/${id}/${formattedDate}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setRoomsReserved(data.occupied_slots);
+        })
+        .catch((error) => {
+          console.error("Error fetching data:", error);
+        });
+    }
+  }
+
+  const handleDateChange = async (date) => {
     setTableReserved("");
     setStartDate(date);
-    getInfoDate(date);
+    setDateReserve(date);
+    await getInfoDate(date);
+    await getInfoRooms(date);
+  
+    // Recalcula os horários disponíveis após a data ser alterada
+    if (conferenceRoomID) {
+      await reservesRoom(conferenceRoomID, date);
+      const now = new Date();
+      const currentTime = `${now.getHours()}:${now.getMinutes()}`;
+      const { filteredStartHours, filteredEndHours } = filterAvailableTimes(reservedHours, availableStartHours, availableEndHours, currentTime);
+      setAvailableStartHours(filteredStartHours);
+      setAvailableEndHours(filteredEndHours);
+    }
   };
+  
 
+  const availableSlots = async () => {
+    
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}availableSlots`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      )
+        .then((res) => res.json())
+        .then((data) => {
+          const { available_start_slots, available_end_slots } = data;
+        setAvailableStartHours(available_start_slots);
+        setAvailableEndHours(available_end_slots);
+        })
+        .catch((error) => {
+          console.error("Error fetching data:", error);
+        });
+    };
+
+    const reservesRoom = async (id, date) => {
+      if (date) {
+        const formattedDate = format(date, "yyyy-MM-dd");
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}room/${id}/${formattedDate}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+          },
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            setReservedHours(data.occupied_slots);
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      }
+    };
+    
   const getInfoDate = async (date) => {
     if (date) {
       const formattedDate = format(date, "yyyy-MM-dd");
@@ -94,7 +231,6 @@ const HomePage = () => {
         .then((res) => res.json())
         .then((data) => {
           setTablesAvailability(data.items?.tables);
-          console.log(data.items)
         })
         .catch((error) => {
           console.error("Error fetching data:", error);
@@ -102,12 +238,12 @@ const HomePage = () => {
     }
   };
 
-  const getInfoRooms = async (id, date) => {
+  const getInfoRooms = async (date) => {
     if (date) {
       const formattedDate = format(date, "yyyy-MM-dd");
       const token = localStorage.getItem("token");
       await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}room/${id}/${formattedDate}`,
+        `${process.env.NEXT_PUBLIC_API_URL}room/${formattedDate}`,
         {
           method: "GET",
           headers: {
@@ -118,8 +254,8 @@ const HomePage = () => {
       )
         .then((res) => res.json())
         .then((data) => {
-          setRoomsAvailability(data.items?.tables);
-          console.log(data.items)
+          setRoomsAvailability(data.items?.conferenceRooms);
+          setDateReserve(data.items.date)
         })
         .catch((error) => {
           console.error("Error fetching data:", error);
@@ -131,12 +267,13 @@ const HomePage = () => {
     if (tableType == 1) {
       setPeriodReserve("dia_todo");
     }
-
+    console.log(startDate, reserveDate)
     const data = {
       table_id: tableID,
-      date: reserveDate,
+      date: startDate,
       period: periodReserve,
     };
+    console.log(data)
     const token = localStorage.getItem("token");
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}reservation/table`,
@@ -160,8 +297,9 @@ const HomePage = () => {
         isClosable: true,
       });
       onClose();
-      setStartDate(reserveDate);
-      getInfoDate(reserveDate);
+      setStartDate(startDate);
+      getInfoDate(startDate);
+      getInfoRooms(startDate)
     } else {
       toast({
         title: "Erro ao reservar",
@@ -174,15 +312,14 @@ const HomePage = () => {
   };
 
   const reservationRoom = async () => {
-    if (tableType == 1) {
-      setPeriodReserve("dia_todo");
-    }
 
     const data = {
-      rooms_id: roomID,
-      date: reserveDate,
-      period: periodReserve,
+      conference_room_id: conferenceRoomID,
+      date: startDate,
+      startTime: startTime,
+      endTime: endTime
     };
+    console.log(data)
     const token = localStorage.getItem("token");
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}reservation/room`,
@@ -205,9 +342,10 @@ const HomePage = () => {
         duration: 5000,
         isClosable: true,
       });
-      onClose();
-      setStartDate(reserveDate);
-      getInfoRoom(reserveDate);
+      handleModalClose();
+      setStartDate(startDate);
+      getInfoRooms(startDate);
+      getInfoDate(startDate);
     } else {
       toast({
         title: "Erro ao reservar",
@@ -217,11 +355,117 @@ const HomePage = () => {
         isClosable: true,
       });
     }
+    setStartTime("");
+    setEndTime("");
   };
 
+  const filterAvailableTimes = (reservedHours, availableStartHours, availableEndHours) => {
+    reservedHours.forEach(reservation => {
+      const startHour = reservation.start_time.split(':').slice(0, 2).join(':');
+      const endHour = reservation.end_time.split(':').slice(0, 2).join(':');
+  
+      // Remove horários de início que estão dentro do intervalo de reserva
+      availableStartHours = availableStartHours.filter(hour => hour < startHour || hour >= endHour);
+  
+      // Remove horários de fim que estão dentro do intervalo de reserva
+      availableEndHours = availableEndHours.filter(hour => hour <= startHour || hour > endHour);
+    });
+  
+    return { filteredStartHours: availableStartHours, filteredEndHours: availableEndHours };
+  };
+
+  const handleStartTimeChange = (selectedStartTime) => {
+    let endHours = [];
+  
+    reservedHours.forEach((reservation, index) => {
+      if (!selectedStartTime) { // Verifica se o placeholder foi selecionado
+        setFilteredEndHours(defaultEndHours); // Restaura a lista completa de horários de fim
+        setStartTime(null); // Reseta o estado do horário de início
+        return;
+    }
+      const reservationStart = reservation.start_time.split(':').slice(0, 2).join(':');
+      const reservationEnd = reservation.end_time.split(':').slice(0, 2).join(':');
+  
+      if (selectedStartTime < reservationStart) {
+        endHours = defaultEndHours.filter(hour => hour > selectedStartTime && hour <= reservationStart);
+      } else if (selectedStartTime === reservationEnd) {
+        // Se o horário de início for exatamente igual ao fim de uma reserva, exiba horários após essa reserva
+        const nextReservation = reservedHours[index + 1];
+        if (nextReservation) {
+          const nextReservationStart = nextReservation.start_time.split(':').slice(0, 2).join(':');
+          endHours = defaultEndHours.filter(hour => hour > selectedStartTime && hour <= nextReservationStart);
+        } else {
+          // Se não houver próxima reserva, permita qualquer horário após o fim da reserva atual
+          endHours = defaultEndHours.filter(hour => hour > selectedStartTime);
+        }
+      } else if (selectedStartTime > reservationEnd && selectedStartTime < reservationStart) {
+        endHours = defaultEndHours.filter(hour => hour > selectedStartTime && hour <= reservationStart);
+      }
+    });
+  
+    // Se não houver reservas subsequentes, permita qualquer horário após o selecionado
+    if (endHours.length === 0) {
+      endHours = defaultEndHours.filter(hour => hour > selectedStartTime);
+    }
+  
+    setFilteredEndHours(endHours);
+    setStartTime(selectedStartTime);
+  };
+  
+
+const handleEndTimeChange = (selectedEndTime) => {
+  let startHours = [];
+
+  reservedHours.forEach((reservation, index) => {
+    if (!selectedEndTime) { // Verifica se o placeholder foi selecionado
+      setFilteredStartHours(defaultStartHours); // Restaura a lista completa de horários de fim
+      console.log("filtro após o place: ", filteredStartHours)
+      setEndTime(null); // Reseta o estado do horário de início
+      return;
+  }
+    const reservationStart = reservation.start_time.split(':').slice(0, 2).join(':');
+    const reservationEnd = reservation.end_time.split(':').slice(0, 2).join(':');
+
+    if (selectedEndTime < reservationEnd) {
+      startHours = defaultStartHours.filter(hour => hour < selectedEndTime && hour <= reservationEnd);
+    } else if (selectedEndTime === reservationStart) {
+      // Se o horário de início for exatamente igual ao fim de uma reserva, exiba horários após essa reserva
+      const nextReservation = reservedHours[index + 1];
+      if (nextReservation) {
+        const nextReservationEnd = nextReservation.end_time.split(':').slice(0, 2).join(':');
+        startHours = defaultStartHours.filter(hour => hour < selectedEndTime && hour <= nextReservationEnd);
+      } else {
+        // Se não houver próxima reserva, permita qualquer horário após o fim da reserva atual
+        startHours = defaultStartHours.filter(hour => hour < selectedEndTime);
+      }
+    } else if (selectedEndTime > reservationStart && selectedEndTime < reservationEnd) {
+      startHours = defaultStartHours.filter(hour => hour < selectedEndTime && hour <= reservationEnd);
+    }
+  });
+
+  // Se não houver reservas subsequentes, permita qualquer horário após o selecionado
+  if (startHours.length === 0) {
+    startHours = defaultStartHours.filter(hour => hour < selectedEndTime);
+  }
+
+  setFilteredStartHours(startHours);
+  setEndTime(selectedEndTime);
+};
+
+  // useEffect(() => {
+  //   availableStartHours, availableEndHours, reservedHours
+
+  //   const { filteredStartHours, filteredEndHours } = filterAvailableTimes(reservedHours, availableStartHours, availableEndHours);
+  // }, []);
   useEffect(() => {
-    handleDateChange(new Date());
+    if (startDate == undefined){
+    handleDateChange(new Date);}
   }, []);
+
+  useEffect(() => {
+    handleClickRoom(conferenceRoomID);
+    console.log(reserveDate)
+  }, [conferenceRoomID]);
   return (
     <>
       <Flex justifyContent={"center"} py={12} px={6} wrap={"wrap"}>
@@ -277,7 +521,7 @@ const HomePage = () => {
                     borderLeft={"3px solid"}
                     onClick={() =>
                       handleClickRoom(
-                        roomsAvailability["2"]?.rooms_id,
+                        roomsAvailability["2"]?.id,
                         roomsAvailability["2"]?.availability?.Manha ===
                           "Livre" &&
                           roomsAvailability["2"]?.availability?.Tarde ===
@@ -296,7 +540,7 @@ const HomePage = () => {
                   >
                     {roomsAvailability["2"]?.availability?.Manha === "Livre" &&
                     roomsAvailability["2"]?.availability?.Tarde === "Livre"
-                      ? "Mesa Livre"
+                      ? "Varanda Livre"
                       : roomsAvailability["2"]?.availability?.Tarde}
                   </GridItem>
                 </Grid>
@@ -311,9 +555,15 @@ const HomePage = () => {
                   marginTop={"13px"}
                 >
                   <GridItem
-                    cursor={"pointer"}
+                    bg={
+                      roomsAvailability["1"]?.availability?.Manha ===
+                        "Livre" &&
+                      roomsAvailability["1"]?.availability?.Tarde === "Livre"
+                        ? "url('/img/sala_reuniao_livre.png')"
+                        : "url('/img/sala_reuniao_ocupada.png')"
+                    }
+                    backgroundSize={"cover"}
                     colSpan={2}
-                    bg="red"
                     minH={"75px"}
                     border={"1px solid #000"}
                     height={"300px"}
@@ -323,9 +573,30 @@ const HomePage = () => {
                     borderLeft={"4px solid"}
                     marginTop={"1px"}
                     marginLeft={""}
+                    onClick={() =>
+                      handleClickRoom(
+                        roomsAvailability["1"]?.id,
+                        roomsAvailability["1"]?.availability?.Manha ===
+                          "Livre" &&
+                          roomsAvailability["1"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
+                    cursor={
+                      roomsAvailability["1"]?.availability?.Manha ===
+                        "Livre" &&
+                      roomsAvailability["1"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
+                    {roomsAvailability["1"]?.availability?.Manha === "Livre" &&
+                    roomsAvailability["1"]?.availability?.Tarde === "Livre"
+                      ? ""
+                      : roomsAvailability["1"]?.availability?.Tarde}
                     {" "}
-                    Sala de Reunião
                   </GridItem>
                 </Grid>
               </Box>
@@ -334,9 +605,9 @@ const HomePage = () => {
                 <Flex justifyContent={"end"} minH={"90px"} marginRight={"-150px"} marginBottom={"80px"} marginTop={"-20px"}>
                   <Box 
                   bg={
-                    tablesAvailability["22"]?.availability?.Manha ===
+                    roomsAvailability["3"]?.availability?.Manha ===
                       "Livre" &&
-                    tablesAvailability["22"]?.availability?.Tarde === "Livre"
+                    roomsAvailability["3"]?.availability?.Tarde === "Livre"
                       ? "url('/img/varanda_livre.png')"
                       : "url('/img/varanda_ocupada.png')"
                   }
@@ -344,30 +615,29 @@ const HomePage = () => {
                   border={"1px solid #000"} 
                   width={"380px"}
                   onClick={() =>
-                    handleClickTable(
-                      tablesAvailability["22"]?.table_id,
-                      tablesAvailability["22"]?.table_type,
-                      tablesAvailability["22"]?.availability?.Manha ===
+                    handleClickRoom(
+                      roomsAvailability["3"]?.id,
+                      roomsAvailability["3"]?.availability?.Manha ===
                         "Livre" &&
-                        tablesAvailability["22"]?.availability?.Tarde ===
+                        roomsAvailability["3"]?.availability?.Tarde ===
                           "Livre"
                         ? false
                         : true
                     )
                   }
                   cursor={
-                    tablesAvailability["22"]?.availability?.Manha ===
+                    roomsAvailability["3"]?.availability?.Manha ===
                       "Livre" &&
-                    tablesAvailability["22"]?.availability?.Tarde === "Livre"
+                    roomsAvailability["3"]?.availability?.Tarde === "Livre"
                       ? "pointer"
                       : ""
                   }
                 >
-                  {tablesAvailability["22"]?.availability?.Manha === "Livre" &&
-                  tablesAvailability["22"]?.availability?.Tarde === "Livre"
-                    ? "Mesa Livre"
-                    : tablesAvailability["22"]?.availability?.Tarde}
-                    <Text textAlign={"center"}>Varanda</Text>
+                  {roomsAvailability["3"]?.availability?.Manha === "Livre" &&
+                  roomsAvailability["3"]?.availability?.Tarde === "Livre"
+                    ? ""
+                    : roomsAvailability["3"]?.availability?.Tarde}
+                    <Text textAlign={"center"}></Text>
                   </Box>
                 </Flex>
                 <Grid
@@ -385,7 +655,7 @@ const HomePage = () => {
                     backgroundPosition= "center"
                   >
                     <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
-                    DP/Financ: Adelia{" "}
+                   {" "}
                     
                   </GridItem>
                   <GridItem
@@ -397,7 +667,7 @@ const HomePage = () => {
                    backgroundPosition= "center"
                   >
                     <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
-                    DP/Financ: Adelia{" "}
+                    {" "}
                   </GridItem>
                   <GridItem
                     className="mesa"
@@ -408,7 +678,7 @@ const HomePage = () => {
                     backgroundPosition= "center"
                   >
                     <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
-                    DP/Financ: Adelia{" "}
+                    {" "}
                     
                   </GridItem>
                 </Grid>
@@ -454,7 +724,7 @@ const HomePage = () => {
                     
                     {tablesAvailability["1"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["1"]?.availability?.Tarde === "Livre"
-                      ? "Mesa Livre"
+                      ? ""
                       : tablesAvailability["1"]?.availability?.Tarde}
                       <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
                   </GridItem>
@@ -493,7 +763,7 @@ const HomePage = () => {
                   >
                     {tablesAvailability["2"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["2"]?.availability?.Tarde === "Livre"
-                      ? "Mesa Livre"
+                      ? ""
                       : tablesAvailability["2"]?.availability?.Tarde}
                       <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
                   </GridItem>
@@ -532,7 +802,7 @@ const HomePage = () => {
                   >
                     {tablesAvailability["3"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["3"]?.availability?.Tarde === "Livre"
-                      ? "Mesa Livre"
+                      ? ""
                       : tablesAvailability["3"]?.availability?.Tarde}
                       <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
                   </GridItem>
@@ -543,9 +813,9 @@ const HomePage = () => {
                 <Flex justifyContent={"start"}>
                   <Box 
                    bg={
-                    tablesAvailability["22"]?.availability?.Manha ===
+                    roomsAvailability["4"]?.availability?.Manha ===
                       "Livre" &&
-                    tablesAvailability["22"]?.availability?.Tarde === "Livre"
+                    roomsAvailability["4"]?.availability?.Tarde === "Livre"
                       ? "url('/img/varanda_livre.png')"
                       : "url('/img/varanda_ocupada.png')"
                   }
@@ -556,8 +826,30 @@ const HomePage = () => {
                   marginLeft={"150px"} 
                   marginTop={"-20px"} 
                   marginBottom={"80px"}
-                  >
-                    <Text textAlign={"center"}>Varanda</Text>
+                  onClick={() =>
+                    handleClickRoom(
+                      roomsAvailability["4"]?.id,
+                      roomsAvailability["4"]?.availability?.Manha ===
+                        "Livre" &&
+                        roomsAvailability["4"]?.availability?.Tarde ===
+                          "Livre"
+                        ? false
+                        : true
+                    )
+                  }
+                  cursor={
+                    roomsAvailability["4"]?.availability?.Manha ===
+                      "Livre" &&
+                    roomsAvailability["4"]?.availability?.Tarde === "Livre"
+                      ? "pointer"
+                      : ""
+                  }
+                >
+                  {roomsAvailability["4"]?.availability?.Manha === "Livre" &&
+                  roomsAvailability["4"]?.availability?.Tarde === "Livre"
+                    ? ""
+                    : roomsAvailability["4"]?.availability?.Tarde}
+                    <Text textAlign={"center"}></Text>
                   </Box>
                 </Flex>
                 <Grid
@@ -601,7 +893,6 @@ const HomePage = () => {
                     p={5}
                   >
                     <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
-                    {tablesAvailability["4"]?.table_name}
                   </GridItem>
                   <GridItem
                     bg={
@@ -639,7 +930,7 @@ const HomePage = () => {
                     <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["5"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["5"]?.availability?.Tarde === "Livre"
-                      ? "Mesa Livre"
+                      ? ""
                       : tablesAvailability["5"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
@@ -676,7 +967,6 @@ const HomePage = () => {
                     }
                   >
                     <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
-                    {tablesAvailability["6"]?.table_name}
                   </GridItem>
                   <GridItem
                     bg={
@@ -714,7 +1004,7 @@ const HomePage = () => {
                     <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["7"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["7"]?.availability?.Tarde === "Livre"
-                      ? "Mesa Livre"
+                      ? ""
                       : tablesAvailability["7"]?.availability?.Tarde}
                   </GridItem>
                 </Grid>
@@ -759,7 +1049,6 @@ const HomePage = () => {
                     }
                   >
                     <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
-                    {tablesAvailability["8"]?.table_name}
                   </GridItem>
                   <GridItem
                     bg={
@@ -797,7 +1086,7 @@ const HomePage = () => {
                     <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
                     {tablesAvailability["9"]?.availability?.Manha === "Livre" &&
                     tablesAvailability["9"]?.availability?.Tarde === "Livre"
-                      ? "Mesa Livre"
+                      ? ""
                       : tablesAvailability["9"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
@@ -834,7 +1123,6 @@ const HomePage = () => {
                     }
                   >
                     <img className="cadeira" src="/img/mesa_com_sombra.png"></img>
-                    {tablesAvailability["10"]?.table_name}
                   </GridItem>
                   <GridItem
                     bg={
@@ -873,7 +1161,7 @@ const HomePage = () => {
                     {tablesAvailability["11"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["11"]?.availability?.Tarde === "Livre"
-                      ? "Mesa Livre"
+                      ? ""
                       : tablesAvailability["11"]?.availability?.Tarde}
                   </GridItem>
                 </Grid>
@@ -895,7 +1183,7 @@ const HomePage = () => {
                     backgroundPosition= "center"
                   >
                     <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
-                    Victor{" "}
+                    {" "}
                   </GridItem>
                   <GridItem
                     bg={
@@ -934,7 +1222,7 @@ const HomePage = () => {
                     {tablesAvailability["12"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["12"]?.availability?.Tarde === "Livre"
-                      ? "Mesa Livre"
+                      ? ""
                       : tablesAvailability["12"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
@@ -946,7 +1234,7 @@ const HomePage = () => {
                     backgroundPosition= "center"
                   >
                     <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
-                    Patty{" "}
+                    {" "}
                   </GridItem>
                   <GridItem
                     className="mesa"
@@ -957,7 +1245,7 @@ const HomePage = () => {
                     backgroundPosition= "center"
                   >
                     <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
-                    Ellen{" "}
+                    {" "}
                   </GridItem>
                 </Grid>
                 <Grid
@@ -1001,7 +1289,7 @@ const HomePage = () => {
                     {tablesAvailability["13"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["13"]?.availability?.Tarde === "Livre"
-                      ? "Mesa Livre"
+                      ? ""
                       : tablesAvailability["13"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
@@ -1041,7 +1329,7 @@ const HomePage = () => {
                     {tablesAvailability["14"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["14"]?.availability?.Tarde === "Livre"
-                      ? "Mesa Livre"
+                      ? ""
                       : tablesAvailability["14"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
@@ -1081,7 +1369,7 @@ const HomePage = () => {
                     {tablesAvailability["15"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["15"]?.availability?.Tarde === "Livre"
-                      ? "Mesa Livre"
+                      ? ""
                       : tablesAvailability["15"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
@@ -1121,7 +1409,7 @@ const HomePage = () => {
                     {tablesAvailability["16"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["16"]?.availability?.Tarde === "Livre"
-                      ? "Mesa Livre"
+                      ? ""
                       : tablesAvailability["16"]?.availability?.Tarde}
                   </GridItem>
                 </Grid>
@@ -1145,7 +1433,7 @@ const HomePage = () => {
                   backgroundSize={'230px 110px'}
                   backgroundRepeat={'no-repeat'}
                   >
-                    Banheiro
+                    
                   </GridItem>
                   <GridItem 
                   colSpan={2} 
@@ -1157,7 +1445,7 @@ const HomePage = () => {
                   backgroundSize={'240px 107px'}
                   backgroundRepeat={'no-repeat'}
                   >
-                    Copa
+                    
                   </GridItem>
                 </Grid>
               <Box display={"block"} minW={"40px"}>
@@ -1169,8 +1457,10 @@ const HomePage = () => {
                   templateColumns="repeat(1, 1fr)"
                 >
                   <GridItem borderRight={"1px"} minH={"80px"} maxW={"100px"}>
-                    ENTRADA{" "}
+                    {" "}
                   </GridItem>
+                  <img className="entrada" src="/img/entrada.png"></img>
+                  <img className="movel" src="/img/movel.png"></img>
                 </Grid>
               </Box>
               <Box display={"block"} width={"100%"} mt={"-100px"} ml={"400px"}>
@@ -1179,7 +1469,10 @@ const HomePage = () => {
                   templateColumns="repeat(6, 1fr)"
                   marginLeft={"-10px"}
                   width={"240px"}
-                >
+                > 
+                  
+                  <img className="moveis" src="/img/moveis.png"></img>
+                  
                   <GridItem 
                   border={"1px solid #000"} 
                   p={5} 
@@ -1188,8 +1481,9 @@ const HomePage = () => {
                   bg={"url('/img/banheiro_centro.png')"}
                   backgroundSize={'140px 195px'}
                   backgroundRepeat={'no-repeat'}
+                  position={'relative'}
                   >
-                    Banheiro
+                    
                   </GridItem>
                   <GridItem 
                   border={"1px solid #000"} 
@@ -1201,7 +1495,7 @@ const HomePage = () => {
                   backgroundRepeat={'no-repeat'}
                   transform={'scaleX(-1)'}
                   >
-                    Banheiro
+                    
                   </GridItem>
                   <GridItem
                     border={"1px solid #000"}
@@ -1213,40 +1507,118 @@ const HomePage = () => {
                     backgroundPosition= "center"
                   >
                    <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
-                    Máquina BI
+                    
                   </GridItem>
                   <GridItem 
                   className="mesa"
                   border={"1px solid #000"}
                   mt="108px"
                   p={5}
-                  bg={"url('/img/mesa_rotativo.png')"}
+                  bg={
+                    tablesAvailability["18"]?.availability?.Manha ===
+                      "Livre" &&
+                    tablesAvailability["18"]?.availability?.Tarde === "Livre"
+                    ? "url('/img/mesa_rotativo.png')"
+                    : "url('/img/mesa_ocupada.png')"
+                  }
                   backgroundPosition= "center"
-                  >
+                  onClick={() =>
+                    handleClickTable(
+                      tablesAvailability["18"]?.table_id,
+                      tablesAvailability["18"]?.table_type,
+                      tablesAvailability["18"]?.availability?.Manha ===
+                        "Livre" &&
+                        tablesAvailability["18"]?.availability?.Tarde ===
+                          "Livre"
+                        ? false
+                        : true
+                    )
+                  }
+                  minH={"40px"}
+                  cursor={
+                    tablesAvailability["18"]?.availability?.Manha ===
+                      "Livre" &&
+                    tablesAvailability["18"]?.availability?.Tarde === "Livre"
+                      ? "pointer"
+                      : ""
+                  }
+                >
                   <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
-                    Rotativo
+                    
                   </GridItem>
                   <GridItem 
                   className="mesa"
                   border={"1px solid #000"}
                   mt="108px"
                   p={5}
-                  bg={"url('/img/mesa_rotativo.png')"}
+                  bg={
+                    tablesAvailability["19"]?.availability?.Manha ===
+                      "Livre" &&
+                    tablesAvailability["19"]?.availability?.Tarde === "Livre"
+                    ? "url('/img/mesa_rotativo.png')"
+                    : "url('/img/mesa_ocupada.png')"
+                  }
                   backgroundPosition= "center"
-                  >
+                  onClick={() =>
+                    handleClickTable(
+                      tablesAvailability["19"]?.table_id,
+                      tablesAvailability["19"]?.table_type,
+                      tablesAvailability["19"]?.availability?.Manha ===
+                        "Livre" &&
+                        tablesAvailability["19"]?.availability?.Tarde ===
+                          "Livre"
+                        ? false
+                        : true
+                    )
+                  }
+                  minH={"40px"}
+                  cursor={
+                    tablesAvailability["19"]?.availability?.Manha ===
+                      "Livre" &&
+                    tablesAvailability["19"]?.availability?.Tarde === "Livre"
+                      ? "pointer"
+                      : ""
+                  }
+                >
                   <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
-                    Rotativo
+                   
                   </GridItem>
                   <GridItem 
                   className="mesa"
                   border={"1px solid #000"}
                   mt="108px"
                   p={5}
-                  bg={"url('/img/mesa_rotativo.png')"}
+                  bg={
+                    tablesAvailability["20"]?.availability?.Manha ===
+                      "Livre" &&
+                    tablesAvailability["20"]?.availability?.Tarde === "Livre"
+                    ? "url('/img/mesa_rotativo.png')"
+                    : "url('/img/mesa_ocupada.png')"
+                  }
                   backgroundPosition= "center"
-                  >
+                  onClick={() =>
+                    handleClickTable(
+                      tablesAvailability["20"]?.table_id,
+                      tablesAvailability["20"]?.table_type,
+                      tablesAvailability["20"]?.availability?.Manha ===
+                        "Livre" &&
+                        tablesAvailability["20"]?.availability?.Tarde ===
+                          "Livre"
+                        ? false
+                        : true
+                    )
+                  }
+                  minH={"40px"}
+                  cursor={
+                    tablesAvailability["20"]?.availability?.Manha ===
+                      "Livre" &&
+                    tablesAvailability["20"]?.availability?.Tarde === "Livre"
+                      ? "pointer"
+                      : ""
+                  }
+                >
                   <img className="cadeira-padrao" src="/img/mesa_com_sombra.png"></img>
-                    Rotativo
+                    
                   </GridItem>
                 </Grid>
               </Box>
@@ -1297,7 +1669,7 @@ const HomePage = () => {
                     {tablesAvailability["17"]?.availability?.Manha ===
                       "Livre" &&
                     tablesAvailability["17"]?.availability?.Tarde === "Livre"
-                      ? "Mesa Livre"
+                      ? ""
                       : tablesAvailability["17"]?.availability?.Tarde}
                   </GridItem>
                   <GridItem
@@ -1310,7 +1682,7 @@ const HomePage = () => {
                     backgroundPosition= "center"
                   >
                     <img className="cadeira-vertical" src="/img/mesa_com_sombra.png"></img>
-                    Brunno{" "}
+                    {" "}
                   </GridItem>
                   <GridItem
                     minH={"45px"}
@@ -1321,7 +1693,7 @@ const HomePage = () => {
                     backgroundPosition= "center"
                   >
                     <img className="cadeira-vertical-oposta" src="/img/mesa_com_sombra.png"></img>
-                    Thais{" "}
+                    {" "}
                   </GridItem>
 
                   <GridItem
@@ -1334,7 +1706,7 @@ const HomePage = () => {
                     backgroundPosition= "center"
                   >
                     <img className="cadeira-vertical" src="/img/mesa_com_sombra.png"></img>
-                    Ton{" "}
+                    {" "}
                   </GridItem>
                 </Grid>
               </Box>
@@ -1360,7 +1732,7 @@ const HomePage = () => {
                     backgroundSize={'225px 120px'}
                     backgroundRepeat={'no-repeat'}
                   >
-                    Banheiro
+                    
                   </GridItem>
                 </Grid>
               </Box>
@@ -1371,14 +1743,13 @@ const HomePage = () => {
                 >
                   <GridItem
                      bg={
-                    tablesAvailability["22"]?.availability?.Manha ===
+                    roomsAvailability["5"]?.availability?.Manha ===
                       "Livre" &&
-                    tablesAvailability["22"]?.availability?.Tarde === "Livre"
+                    roomsAvailability["5"]?.availability?.Tarde === "Livre"
                       ? "url('/img/varanda_livre.png')"
                       : "url('/img/varanda_ocupada.png')"
                   }
                   backgroundSize={"cover"}
-                    cursor={"pointer"}
                     className="container-varanda-direita"
                     rowSpan={2}
                     colSpan={1}
@@ -1387,8 +1758,30 @@ const HomePage = () => {
                     minH={"400px"}
                     marginTop={"-200px"}
                     marginLeft={"-8"}
+                    onClick={() =>
+                      handleClickRoom(
+                        roomsAvailability["5"]?.id,
+                        roomsAvailability["5"]?.availability?.Manha ===
+                          "Livre" &&
+                          roomsAvailability["5"]?.availability?.Tarde ===
+                            "Livre"
+                          ? false
+                          : true
+                      )
+                    }
+                    cursor={
+                      roomsAvailability["5"]?.availability?.Manha ===
+                        "Livre" &&
+                      roomsAvailability["5"]?.availability?.Tarde === "Livre"
+                        ? "pointer"
+                        : ""
+                    }
                   >
-                    Varanda{" "}
+                    {roomsAvailability["5"]?.availability?.Manha === "Livre" &&
+                    roomsAvailability["5"]?.availability?.Tarde === "Livre"
+                      ? " Varanda Livre"
+                      : roomsAvailability["5"]?.availability?.Tarde}
+                   {" "}
                   </GridItem>
                 </Grid>
               </Box>
@@ -1418,12 +1811,12 @@ const HomePage = () => {
               <>
                 <p>Selecione o período para a reserva:</p>
                 <Select
-                  value={period}
-                  onChange={(e) => setPeriod(e.target.value)}
+                  placeholder="Selecione o Horário"
+                  onChange={(e) => setPeriodReserve(e.target.value)}
                 >
-                  <option value="Manhã">Manhã</option>
-                  <option value="Tarde">Tarde</option>
-                  <option value="Dia todo">Dia todo</option>
+                  <option value="manha">Manhã</option>
+                  <option value="tarde">Tarde</option>
+                  <option value="dia_todo">Dia todo</option>
                 </Select>
               </>
             )}
@@ -1434,6 +1827,55 @@ const HomePage = () => {
               Fechar
             </Button>
             <Button colorScheme="green" onClick={reservationTable}>
+              Reservar
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isModalOneOpen} onClose={handleModalClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Reserva de Sala de conferência</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <p>Sala: {conferenceRoomID}</p>
+                <p>Informe o período para a reserva na data:</p>
+          
+          <label htmlFor="start-time">Hora de início:</label>
+                <Select 
+                  id="start-time"
+                  placeholder="Selecione a hora de início"
+                  size="md"
+                  value={startTime}
+                  onChange={(e) => handleStartTimeChange(e.target.value)}
+                >
+                  {filteredStartHours.map((hour, index) => (
+                    <option key={index} value={hour}>{hour}</option>
+                  ))}
+                </Select>
+
+                <label htmlFor="end-time">Hora de término:</label>
+
+                <Select 
+                  id="end-time"
+                  placeholder="Selecione a hora de término"
+                  size="md"
+                  value={endTime}
+                  onChange={(e) => handleEndTimeChange(e.target.value)}
+                >
+                  {filteredEndHours.map((hour, index) => (
+                    <option key={index} value={hour}>{hour}</option>
+                  ))}
+                </Select>
+
+          </ModalBody>
+
+          <ModalFooter>
+            <Button colorScheme="blue" mr={3} onClick={handleModalClose}>
+              Fechar
+            </Button>
+            <Button colorScheme="green" onClick={reservationRoom}>
               Reservar
             </Button>
           </ModalFooter>

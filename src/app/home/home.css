@@ -12,6 +12,13 @@
 
 /* styles.css */
 
+.entrada {
+  margin-top: -80px;
+  margin-left: 10px;
+  width: 65px;
+  height: 65px;
+}
+
 .container {
   /* border: 1px solid #000; */
   position: relative;
@@ -38,12 +45,13 @@
 
 .container-varanda-direita {
   position: relative;
-  writing-mode: vertical-rl;
+  writing-mode: vertical-lr;
   transform: rotate(180deg); 
   text-align: center;
   max-width: 40px;
   min-height: 290px;
   font-size: 20px;
+  display: flex;
   align-items: center;
   justify-content: center;
 }
@@ -166,6 +174,21 @@
   clip-path: inset(0 0 90px 0);
 }
 
+.moveis {
+  position: absolute;
+  width: 400px;
+  height: 120px;
+  margin-left: -400px;
+  margin-top: 75px;
+}
+
+.movel {
+  position: absolute;
+  width: 250px;
+  height: 100px;
+  margin-left: 615px;
+  margin-top: -220px;
+}
 
 @import "rsuite/dist/rsuite.css";
 
