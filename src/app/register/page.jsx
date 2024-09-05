@@ -77,7 +77,7 @@ export default function Register() {
           duration: 5000,
           isClosable: true,
         });
-        router.push("/login");
+        router.push("/");
       } else {
         toast({
           title: "Erro de registro",
@@ -211,19 +211,3 @@ export default function Register() {
     </Flex>
   );
 }
-
-$("#filtro_saude").change(function () {
-  var txtsaude = $("#filtro_saude").val();
-  $.ajax({
-    type: "POST",
-    url: "/busca-filtro-saude/",
-    data: {
-      txtsaude: txtsaude,
-      order: "DESC",
-      security: $("#filtro_saude_nonce").val(),
-    },
-    success: function (response) {
-      $("#result_saude").html(response);
-    },
-  });
-});

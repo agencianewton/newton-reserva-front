@@ -1,6 +1,6 @@
 .vertical-text {
   writing-mode: vertical-rl;
-  transform: rotate(180deg); /* Para ajustar a orientação do texto */
+  transform: rotate(180deg);
   text-align: center;
   max-width: 40px;
   min-height: 290px;
@@ -8,6 +8,186 @@
   font-size: 20px;
   align-items: center;
   justify-content: center;
+}
+
+/* styles.css */
+
+.entrada {
+  margin-top: -80px;
+  margin-left: 10px;
+  width: 65px;
+  height: 65px;
+}
+
+.container {
+  /* border: 1px solid #000; */
+  position: relative;
+  width: 2930px;
+  height: 938px;
+  border: 4px solid rgb(0, 0, 0);
+  background-color: #939598;
+}
+
+.container-mesas-esquerda{
+  position: relative;
+
+}
+
+.container-mesas-esquerda::before {
+  content: "";
+  position: absolute;
+  left: 0px; 
+  top: 70px; 
+  width: calc(100% + 100px); 
+  height: 4px;
+  background-color: #000; 
+}
+
+.container-varanda-direita {
+  position: relative;
+  writing-mode: vertical-lr;
+  transform: rotate(180deg); 
+  text-align: center;
+  max-width: 40px;
+  min-height: 290px;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.container-varanda-direita::before {
+  content: ""; /* Necessário para gerar o elemento */
+  position: absolute;
+  left: 98px; /* Move a linha 50px para a esquerda, saindo da lateral */
+  top: 734px; /* Ajuste a distância da linha em relação ao fundo do contêiner */
+  width: calc(100% + 50px); /* Faz a linha ocupar toda a largura do contêiner mais 100px (50px de cada lado) */
+  height: 4px;
+  background-color: #000; /* Cor da linha */
+} 
+
+.container-cima-direita {
+  position: relative;
+
+}
+
+.container-cima-direita::before {
+  content: "";
+  position: absolute;
+  left: -50px; 
+  top: -44px; 
+  width: calc(100% + 50px); 
+  height: 4px;
+  background-color: #000; 
+}
+
+.container-cima-direita::after {
+  content: ""; 
+  position: absolute;
+  left: -2px;
+  top: -44px; 
+  height: calc(100% + -563px); 
+  width: 4px; 
+  background-color: #000;
+}
+
+.container-baixo-direita{
+  position: relative;
+}
+
+.container-baixo-direita::before {
+  content: "";
+  position: absolute;
+  top: 139px; 
+  left: -133px; 
+  height: 62%; 
+  width: 4px; 
+  background-color: #000; 
+}
+.container-baixo {
+  position: relative;
+}
+
+.container-baixo::before {
+  content: "";
+  position: absolute;
+  left: 3px; 
+  bottom: 170px; 
+  width: calc(100% + -860px); 
+  height: 3px;
+  background-color: #000; 
+}
+
+.mesa {
+  position: relative; 
+  width: 170px;
+  height: 90px;
+  background-size: cover;
+  overflow: visible; 
+}
+
+.mesa-vertical {
+  position: relative;
+  width: 170px;
+  height: 90px;
+  background-size: cover;
+  transform: rotate(90deg);
+  overflow: visible;
+}
+
+.cadeira {
+  position: absolute; 
+  top: 70%; 
+  left: 50%; 
+  width: 150%; 
+  height: 140%; 
+  transform: translate(-50%, -50%) rotate(180deg);
+  clip-path: inset(0 0 90px 0);
+}
+
+.cadeira-padrao {
+  position: absolute; 
+  top: -37%; 
+  right: 0%; 
+  width: 150%; 
+  height: 110%;
+  clip-path: inset(0 0 65px 0);
+}
+
+.cadeira-vertical {
+  position: absolute;
+  top: 172%; 
+  left: 50%; 
+  width: 150%; 
+  height: 140%; 
+  transform: translate(-50%, -50%) rotate(180deg); 
+  clip-path: inset(0 0 90px 0);
+}
+
+.cadeira-vertical-oposta {
+  position: absolute; 
+  top: -72%; 
+  left: 50%; 
+  width: 150%; 
+  height: 140%; 
+  transform: translate(-50%, -50%) rotate(0deg);
+  clip-path: inset(0 0 90px 0);
+}
+
+.moveis {
+  position: absolute;
+  width: 400px;
+  height: 120px;
+  margin-left: -400px;
+  margin-top: 75px;
+}
+
+.movel {
+  position: absolute;
+  width: 250px;
+  height: 100px;
+  margin-left: 615px;
+  margin-top: -220px;
 }
 
 @import "rsuite/dist/rsuite.css";
