@@ -25,6 +25,15 @@ import {
   ModalCloseButton,
   useDisclosure,
   Select,
+  Table,
+  Thead,
+  Tbody,
+  Tfoot,
+  Tr,
+  Th,
+  Td,
+  TableCaption,
+  TableContainer,
 } from "@chakra-ui/react";
 import "./home.css";
 import DatePicker from "react-datepicker";
@@ -44,7 +53,7 @@ const HomePage = () => {
   const [tableID, setTableID] = useState();
   const [tableType, setTableType] = useState();
   const [periodReserve, setPeriodReserve] = useState("");
-  const [tableReserved, setTableReserved] = useState("");
+  const [tableReserved, setTableReserved] = useState([]);
   const [reserveDate, setReserveDate] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [roomsAvailability, setRoomsAvailability] = useState([]);
@@ -61,31 +70,48 @@ const HomePage = () => {
   const [filteredEndHours, setFilteredEndHours] = useState([]);
   const [defaultEndHours, setDefaultEndHours] = useState([]);
   const [defaultStartHours, setDefaultStartHours] = useState([]);
+  const [authUserId, setAuthUserId] = useState([]);
+  const [reservationDeleted, setReservationDeleted] = useState(false);
+  const [userLogged, setUserLogged] = useState();
+  const [reservationDeletedTable, setReservationDeletedTable] = useState(false);
+
 
   const openModalOne = () => setModalOneOpen(true);
+
+  
 
   const handleModalClose = () => {
     // Redefine os valores dos selects ao fechar o modal
     setStartTime("");
-    setEndTime("");
+    setEndTime("");   // Reseta o horário de término
+    setFilteredStartHours([]); // Reseta as listas filtradas
+    setFilteredEndHours([]);
     setModalOneOpen(false);  // Chama a função onClose para fechar o modal
   };
 
   const toast = useToast();
 
-  const handleClickTable = (tableID, tableType, tableCheck) => {
+  const handleClickTable = async (tableID, tableType) => {
       if (tableID == 18 || tableID == 19 || tableID == 20) {
         setTableID(tableID);
         setTableType(tableType);
+        await getReservationTable(tableID, startDate);
         onOpen();
       }
-      else if (tableCheck == true) {
-      alert("Mesa já está reservada");
-    } else if (tableID == 4 || tableID == 6 || tableID == 8 || tableID == 10) {
-      alert("Você não tem permissão para agendar nessas mesas");
+      else if (tableID == 4 || tableID == 6 || tableID == 8 || tableID == 10) {
+        if (userLogged.role_id == 3){
+          setTableID(tableID);
+          setTableType(tableType);
+          await getReservationTable(tableID, startDate);
+          onOpen();
+        }
+        else {
+          alert("Você não tem permissão para efetuar essa reserva");
+        }
     } else {
       setTableID(tableID);
       setTableType(tableType);
+      await getReservationTable(tableID, startDate);
       onOpen();
     }
   };
@@ -96,22 +122,18 @@ const HomePage = () => {
      setFilteredEndHours([]);
      setReservedHours([]);  // Redefine o estado de reservas, se necessário
      let date = startDate; // Data selecionada no modal
-     console.log("passou no filterrooms: ", date)
      await reservesRoom(id, date);
      await availableSlots();
-    console.log(reservedHours)
      setConferenceRoomID(id);
  
      // Filtra os horários disponíveis com base nas reservas e horários selecionados
-     const { filteredStartHours, filteredEndHours } = filterAvailableTimes(reservedHours, availableStartHours, availableEndHours);
+     const { filteredStartHours, filteredEndHours } = filterAvailableTimes(reservedHours, availableStartHours, availableEndHours, date);
      setDefaultEndHours(filteredEndHours);
      setDefaultStartHours(filteredStartHours);
  
      // Atualiza os estados com os horários filtrados
      setFilteredStartHours(filteredStartHours);
      setFilteredEndHours(filteredEndHours);
-
-     console.log("arrays: ", filteredStartHours, filteredEndHours);
   }
 
   const handleClickRoom = async (id) => {
@@ -120,6 +142,9 @@ const HomePage = () => {
       setEndTime(""); // Reseta o horário de fim
       filterRooms(id);
       setDateReserve(startDate);
+      let data = startDate;
+      await getReservationRoom(id, data)
+
       if (filteredStartHours.length > 0 || filteredEndHours.length > 0) {
         setTimeout(() => {
           openModalOne();
@@ -130,6 +155,56 @@ const HomePage = () => {
       }
     } catch (error) {
       console.error("Erro ao processar a reserva:", error);
+    }
+  };
+
+  const deleteReservation = async (reservationId) => {
+    try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}room/delete/${reservationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`, // Passa o token do usuário logado
+        },
+      });
+  
+      const data = await response.json();
+      if (response.ok) {
+        alert('Reserva cancelada com sucesso');
+        setReservationDeleted(true);
+        getInfoRooms(startDate);
+        getInfoDate(startDate);
+      } else {
+        alert(data.error);
+      }
+    } catch (error) {
+      console.error('Erro ao cancelar a reserva:', error);
+    }
+  };
+
+  const deleteReservationTable = async (reservationId) => {
+    try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}table/delete/${reservationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`, // Passa o token do usuário logado
+        },
+      });
+  
+      const data = await response.json();
+      if (response.ok) {
+        alert('Reserva cancelada com sucesso');
+        setReservationDeletedTable(true);
+        getInfoRooms(startDate);
+        getInfoDate(startDate);
+      } else {
+        alert(data.error);
+      }
+    } catch (error) {
+      console.error('Erro ao cancelar a reserva:', error);
     }
   };
 
@@ -153,8 +228,27 @@ const HomePage = () => {
     }
   }
 
+  const getReservationTable = async (id, date) => {
+    if (date) {
+      const formattedDate = format(date, "yyyy-MM-dd");
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}table/${id}/${formattedDate}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setTableReserved(data.occupied_slots);
+        })
+        .catch((error) => {
+          console.error("Error fetching data:", error);
+        });
+    }
+  }
+
   const handleDateChange = async (date) => {
-    setTableReserved("");
     setStartDate(date);
     setDateReserve(date);
     await getInfoDate(date);
@@ -264,7 +358,7 @@ const HomePage = () => {
   };
 
   const reservationTable = async () => {
-    if (tableType == 1) {
+    if (tableType == 1 || tableType == 2) {
       setPeriodReserve("dia_todo");
     }
     console.log(startDate, reserveDate)
@@ -273,7 +367,7 @@ const HomePage = () => {
       date: startDate,
       period: periodReserve,
     };
-    console.log(data)
+    console.log(data);
     const token = localStorage.getItem("token");
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}reservation/table`,
@@ -319,7 +413,6 @@ const HomePage = () => {
       startTime: startTime,
       endTime: endTime
     };
-    console.log(data)
     const token = localStorage.getItem("token");
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}reservation/room`,
@@ -359,7 +452,43 @@ const HomePage = () => {
     setEndTime("");
   };
 
-  const filterAvailableTimes = (reservedHours, availableStartHours, availableEndHours) => {
+  const getUserLogged = async () => {
+    const token = localStorage.getItem("token");
+    await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}user`,
+      {
+        method: "GET",
+
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        }
+      })
+    .then(response => response.json())
+    .then(data => {
+      setUserLogged(data);
+      console.log(userLogged);
+      setAuthUserId(data.id); // Armazene o ID do usuário no estado, se necessário
+    })
+    .catch(error => {
+      console.error("Erro ao buscar o usuário logado:", error);
+    });
+  }
+
+  const filterAvailableTimes = (reservedHours, availableStartHours, availableEndHours, selectedDate) => {
+    const now = new Date(); // Data e hora atual
+    const currentHour = `${now.getHours()}:${now.getMinutes()}`.padStart(5, '0'); // Horário atual para comparação
+    
+    // Verifica se 'selectedDate' é um objeto de data válido, se não for, cria um.
+    if (!(selectedDate instanceof Date)) {
+      selectedDate = new Date(selectedDate); // Converte a 'selectedDate' para um objeto Date, se necessário.
+    }
+  
+    // Converte as datas para um formato comparável
+    const today = new Date().toLocaleDateString(); // Data de hoje no formato local
+    const selectedDay = selectedDate.toLocaleDateString(); // Data selecionada no formato local
+  
+    // Filtra horários com base nas reservas
     reservedHours.forEach(reservation => {
       const startHour = reservation.start_time.split(':').slice(0, 2).join(':');
       const endHour = reservation.end_time.split(':').slice(0, 2).join(':');
@@ -371,8 +500,16 @@ const HomePage = () => {
       availableEndHours = availableEndHours.filter(hour => hour <= startHour || hour > endHour);
     });
   
+    // Se a data selecionada for hoje, filtra os horários disponíveis com base na hora atual
+    if (today === selectedDay) {
+      availableStartHours = availableStartHours.filter(hour => hour >= currentHour);
+      availableEndHours = availableEndHours.filter(hour => hour > currentHour);
+    }
+  
     return { filteredStartHours: availableStartHours, filteredEndHours: availableEndHours };
   };
+  
+  
 
   const handleStartTimeChange = (selectedStartTime) => {
     let endHours = [];
@@ -457,6 +594,28 @@ const handleEndTimeChange = (selectedEndTime) => {
 
   //   const { filteredStartHours, filteredEndHours } = filterAvailableTimes(reservedHours, availableStartHours, availableEndHours);
   // }, []);
+
+  useEffect(() => {
+    if (reservationDeleted) {
+      // Reabra o modal e chame handleClickRoom para atualizar as listas
+      handleClickRoom(conferenceRoomID);
+  
+      // Certifique-se de resetar o estado para evitar loops
+      setReservationDeleted(false);
+    }
+  }, [reservationDeleted, conferenceRoomID]);
+
+  useEffect(() => {
+    if (reservationDeletedTable) {
+      // Reabra o modal e chame handleClickRoom para atualizar as listas
+      handleClickTable(tableID, tableType);
+  
+      // Certifique-se de resetar o estado para evitar loops
+      setReservationDeletedTable(false);
+    }
+  }, [reservationDeletedTable, tableID, tableType]);
+  
+
   useEffect(() => {
     if (startDate == undefined){
     handleDateChange(new Date);}
@@ -464,8 +623,14 @@ const handleEndTimeChange = (selectedEndTime) => {
 
   useEffect(() => {
     handleClickRoom(conferenceRoomID);
-    console.log(reserveDate)
   }, [conferenceRoomID]);
+
+  useEffect(() => {
+  }, [filteredStartHours, filteredEndHours]);
+
+  useEffect(() => {
+    getUserLogged();
+  }, []);
   return (
     <>
       <Flex justifyContent={"center"} py={12} px={6} wrap={"wrap"}>
@@ -1794,10 +1959,22 @@ const handleEndTimeChange = (selectedEndTime) => {
 
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent
+        maxW="700px"
+        display="flex" 
+        flexDirection="column" 
+        alignItems="center" 
+        justifyContent="center"
+        >
           <ModalHeader>Reserva de Mesa</ModalHeader>
           <ModalCloseButton />
-          <ModalBody>
+          <ModalBody
+          display="flex" 
+          flexDirection="column" 
+          alignItems="center" 
+          justifyContent="center"
+          width="100%"
+          >
             <p>MESA: {tableID}</p>
             <p>Selecione a data para a reserva:</p>
             <DatePicker
@@ -1806,20 +1983,63 @@ const handleEndTimeChange = (selectedEndTime) => {
               dateFormat="dd/MM/yyyy"
               customInput={<Input pr="4.5rem" icon={<CalendarIcon />} />}
             />
-
             {tableType === 3 && (
               <>
                 <p>Selecione o período para a reserva:</p>
                 <Select
                   placeholder="Selecione o Horário"
+                  size="md"
+                  marginTop={'10px'}
+                  width={'400px'}
                   onChange={(e) => setPeriodReserve(e.target.value)}
                 >
                   <option value="manha">Manhã</option>
                   <option value="tarde">Tarde</option>
                   <option value="dia_todo">Dia todo</option>
                 </Select>
-              </>
+
+              </>  
             )}
+            {tableReserved && tableReserved.length > 0 ? (
+                  <TableContainer>
+                     <h5 style={{textAlign: "center"}}>Reservas Registradas</h5>
+                  <Table variant="simple">
+                    <TableCaption>Reservas registradas</TableCaption>
+                    <Thead>
+                      <Tr>
+                        <Th>Nome do Usuário</Th>
+                        <Th>Hora de Início</Th>
+                        <Th>Hora de Término</Th>
+                        <Th>Ações</Th> {/* Adicionar coluna para ações */}
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {tableReserved.map((element, index) => (
+                        <Tr key={index}>
+                          <Td>{element.user.name}</Td>
+                          <Td>{element.start_time}</Td>
+                          <Td>{element.end_time}</Td>
+                          <Td>
+                            {authUserId === element.user_id && (  // Exibir o botão apenas se o user_id corresponder
+                              <Button
+                                colorScheme="red"
+                                onClick={() => {
+                                  onClose();
+                                  deleteReservationTable(element.id);  // Executa a função de deletar
+                                }}
+                              >
+                                Deletar
+                              </Button>
+                            )}
+                          </Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                </TableContainer>
+                ) : (
+                  <p>Nenhuma reserva encontrada.</p>
+                )}
           </ModalBody>
 
           <ModalFooter>
@@ -1835,18 +2055,29 @@ const handleEndTimeChange = (selectedEndTime) => {
 
       <Modal isOpen={isModalOneOpen} onClose={handleModalClose}>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent  
+          maxW="700px"
+          display="flex" 
+          flexDirection="column" 
+          alignItems="center" 
+          justifyContent="center"
+        >
           <ModalHeader>Reserva de Sala de conferência</ModalHeader>
           <ModalCloseButton />
-          <ModalBody>
-            <p>Sala: {conferenceRoomID}</p>
-                <p>Informe o período para a reserva na data:</p>
-          
-          <label htmlFor="start-time">Hora de início:</label>
+          <ModalBody
+            display="flex" 
+            flexDirection="column" 
+            alignItems="center" 
+            justifyContent="center"
+            width="100%"
+          >
+            <h4>Sala: {conferenceRoomID}</h4>
+                <h4>Informe o período para a reserva</h4>
                 <Select 
                   id="start-time"
                   placeholder="Selecione a hora de início"
                   size="md"
+                  width={'400px'}
                   value={startTime}
                   onChange={(e) => handleStartTimeChange(e.target.value)}
                 >
@@ -1855,12 +2086,12 @@ const handleEndTimeChange = (selectedEndTime) => {
                   ))}
                 </Select>
 
-                <label htmlFor="end-time">Hora de término:</label>
-
                 <Select 
                   id="end-time"
                   placeholder="Selecione a hora de término"
                   size="md"
+                  marginTop={'10px'}
+                  width={'400px'}
                   value={endTime}
                   onChange={(e) => handleEndTimeChange(e.target.value)}
                 >
@@ -1868,7 +2099,46 @@ const handleEndTimeChange = (selectedEndTime) => {
                     <option key={index} value={hour}>{hour}</option>
                   ))}
                 </Select>
-
+                {roomsReserved && roomsReserved.length > 0 ? (
+                  <TableContainer>
+                     <h5 style={{textAlign: "center"}}>Reservas Registradas</h5>
+                  <Table variant="simple">
+                    <TableCaption>Reservas registradas</TableCaption>
+                    <Thead>
+                      <Tr>
+                        <Th>Nome do Usuário</Th>
+                        <Th>Hora de Início</Th>
+                        <Th>Hora de Término</Th>
+                        <Th>Ações</Th> {/* Adicionar coluna para ações */}
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {roomsReserved.map((element, index) => (
+                        <Tr key={index}>
+                          <Td>{element.user.name}</Td>
+                          <Td>{element.start_time}</Td>
+                          <Td>{element.end_time}</Td>
+                          <Td>
+                            {authUserId === element.user_id && (  // Exibir o botão apenas se o user_id corresponder
+                              <Button
+                                colorScheme="red"
+                                onClick={() => {
+                                  handleModalClose();
+                                  deleteReservation(element.id);  // Executa a função de deletar
+                                }}
+                              >
+                                Deletar
+                              </Button>
+                            )}
+                          </Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                </TableContainer>
+                ) : (
+                  <p>Nenhuma reserva encontrada.</p>
+                )}
           </ModalBody>
 
           <ModalFooter>

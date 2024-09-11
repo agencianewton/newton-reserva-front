@@ -14,6 +14,7 @@ import {
   useColorModeValue,
   Link,
   useToast,
+  Select,
 } from "@chakra-ui/react";
 import { useState } from "react";
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
@@ -21,6 +22,7 @@ import { useRouter } from "next/navigation";
 
 export default function Register() {
   const [name, setName] = useState();
+  const [role_id, setRole_Id] = useState();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState();
   const [isEmailValid, setIsEmailValid] = useState(true);
@@ -59,14 +61,14 @@ export default function Register() {
   };
 
   const handleSubmit = async () => {
-    if (name && isEmailValid && isPasswordStrong && doPasswordsMatch) {
+    if (name && isEmailValid && isPasswordStrong && doPasswordsMatch && role_id) {
       setIsRegistering(true);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, role_id, email, password }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -110,6 +112,17 @@ export default function Register() {
                 onChange={(e) => setName(e.target.value)}
                 required
               />
+            </FormControl>
+            <FormControl id="tipo" isRequired>
+              <FormLabel>Tipo de usuário</FormLabel>
+              <Select
+                  placeholder="Selecione o tipo"
+                  size="md"
+                  onChange={(e) => setRole_Id(e.target.value)}
+                >
+                  <option value="2">Funcionário</option>
+                  <option value="3">Diretor de Arte</option>
+                </Select>
             </FormControl>
             <FormControl id="email" isRequired>
               <FormLabel>E-mail</FormLabel>
