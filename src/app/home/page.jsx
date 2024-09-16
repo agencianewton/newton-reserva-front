@@ -617,9 +617,12 @@ const handleEndTimeChange = (selectedEndTime) => {
   
 
   useEffect(() => {
-    if (startDate == undefined){
-    handleDateChange(new Date);}
-  }, []);
+    if (!startDate) {
+      handleDateChange(new Date());
+    } else {
+      handleDateChange(startDate);
+    }
+  }, [startDate]);
 
   useEffect(() => {
     handleClickRoom(conferenceRoomID);
