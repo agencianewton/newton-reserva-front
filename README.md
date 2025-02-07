@@ -1,5 +1,43 @@
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
+# Configurando o Projeto das reservas
+
+Este guia explica como configurar e rodar o projeto das reservas em Next.js.
+
+## Requisitos
+Antes de começar, certifique-se de ter os seguintes requisitos instalados:
+
+- **Node.js 20.5.0**
+- **npm** (já incluído com o Node.js)
+
+## Passo a Passo
+
+### 1. Clonar o repositório
+```sh
+git clone https://github.com/agencianewton/newton-reserva-front.git
+cd newton-reserva-front
+```
+
+### 2. Instalar as dependências
+```sh
+npm install
+```
+
+### 3. Rodar o servidor de desenvolvimento
+```sh
+npm run dev
+```
+O projeto estará acessível em `http://localhost:3000`.
+
+## Comandos úteis
+
+### Para construir a aplicação para produção
+```sh
+npm export
+```
+
+Agora está pronto para rodar! 🚀
+
 ## Getting Started
 
 First, run the development server:
