@@ -49,7 +49,7 @@ const HomePage = () => {
         flexDirection="column" // Definido como column para alinhar a imagem e os botões verticalmente
         gap={4}
       >
-        <Image src="/img/logo.jpg" alt="Descrição da Imagem" mb={4} />
+        <Image src="/img/logo.jpg" alt="Logo Newton" mb={4} />
         <Flex
           justifyContent="center"
           alignItems="center"

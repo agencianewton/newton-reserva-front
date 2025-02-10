@@ -10,6 +10,7 @@ import {
   Checkbox,
   Stack,
   Link,
+  Tooltip,
   Text,
   Button,
   Heading,
@@ -40,6 +41,7 @@ import {
   Icon,
   IconButton,
   useBreakpointValue,
+  Image,
 } from "@chakra-ui/react";
 import "./rooms.css";
 import { ArrowBackIcon, DeleteIcon } from "@chakra-ui/icons"; // Certifique-se de importar os ícones corretamente
@@ -105,11 +107,45 @@ const RoomsPage = () => {
   const [recurrentId, setRecurrentId] = useState("1");
   const [recurrentDay, setRecurrentDay] = useState("");
   const [reservationId, setReservationId] = useState();
+  const [selectedTimeError, setSelectedTimeError] = useState(false);
+  const [endTimeError, setEndTimeError] = useState(false);
+  const [descriptionError, setDescriptionError] = useState(false);
+  const [recurrenceError, setRecurrenceError] = useState(false);
   const toast = useToast();
   const [isModalDeleteOpen, setIsModalDeleteOpen] = useState(false);
+  const [isOpenDetails, setIsOpenDetails] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState(null);
+
+  const handleOpenDetails = (
+    reservationId,
+    reservationUserId,
+    reservationForTimeSlot,
+    reservationStartHour,
+    reservationEndHour,
+    reservationRoom
+  ) => {
+    setSelectedReservation({
+      id: reservationId,
+      userId: reservationUserId,
+      description: reservationForTimeSlot,
+      start: reservationStartHour,
+      end: reservationEndHour,
+      room: reservationRoom,
+    });
+
+    setIsOpenDetails(true);
+  };
+
+  const handleCloseDetails = () => {
+    setIsOpenDetails(false);
+  };
 
   const handleSlotClick = (roomId, roomName, time, slots) => {
-    slots.push("18:00");
+    if (!slots.includes("17:45")) {
+      slots.push("15:00");
+    } else {
+      slots.push("18:00");
+    }
     setSelectedRoomId(roomId);
     setSelectedTime(time);
     setRoomName(roomName);
@@ -203,7 +239,7 @@ const RoomsPage = () => {
     } catch (error) {
       console.error("Erro ao deletar a reserva", error);
     }
-
+    handleCloseDetails();
     DeleteModalClose();
   };
 
@@ -216,6 +252,42 @@ const RoomsPage = () => {
     setRecurrentId("1");
     setDescription(null);
     setIsModalOpen(false);
+  };
+
+  const handleSubmit = () => {
+    let hasError = false;
+
+    if (!selectedTime || selectedTime.trim() === "") {
+      setSelectedTimeError(true);
+      hasError = true;
+    } else {
+      setSelectedTimeError(false);
+    }
+
+    if (!endHourRegister || endHourRegister.trim() === "") {
+      setEndTimeError(true);
+      hasError = true;
+    } else {
+      setEndTimeError(false);
+    }
+
+    if (!description || description.trim() === "") {
+      setDescriptionError(true);
+      hasError = true;
+    } else {
+      setDescriptionError(false);
+    }
+
+    if (!recurrentId || recurrentId.trim() === "") {
+      setRecurrenceError(true);
+      hasError = true;
+    } else {
+      setRecurrenceError(false);
+    }
+
+    if (!hasError) {
+      handleReservation(); // Chame a função handleReservation sem parâmetros
+    }
   };
 
   const handleReservation = async () => {
@@ -265,26 +337,33 @@ const RoomsPage = () => {
     closeModal();
   };
 
-  const handleDescriptionChange = (event) => {
-    setDescription(event.target.value);
+  const handleDescriptionChange = (e) => {
+    setDescription(e.target.value);
+    if (e.target.value.trim() !== "") {
+      setDescriptionError(false);
+    }
   };
 
   const handleLogout = async () => {
-    const token = localStorage.getItem("token");
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}logout`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-    if (res.ok) {
-      toast({
-        title: "Logout efetuado com sucesso",
-        status: "success",
-        duration: 5000,
-        isClosable: true,
+    if (userLogged) {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}logout`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
+      if (res.ok) {
+        toast({
+          title: "Logout efetuado com sucesso",
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+        router.push("/");
+      }
+    } else {
       router.push("/");
     }
   };
@@ -313,7 +392,7 @@ const RoomsPage = () => {
       .then((response) => response.json())
       .then((data) => {
         setUserLogged(data);
-        setAuthUserId(data.id); // Armazene o ID do usuário no estado, se necessário
+        setAuthUserId(data.id);
       })
       .catch((error) => {
         console.error("Erro ao buscar o usuário logado:", error);
@@ -322,7 +401,6 @@ const RoomsPage = () => {
 
   const getOnlineRooms = async () => {
     const token = localStorage.getItem("token");
-    console.log(token);
     await fetch(`${process.env.NEXT_PUBLIC_API_URL}get/onlineRooms`, {
       method: "GET",
       headers: {
@@ -347,7 +425,6 @@ const RoomsPage = () => {
   const getInfoOnlineRooms = async (date) => {
     if (date) {
       const formattedDate = format(date, "yyyy-MM-dd");
-      console.log(formattedDate);
       const token = localStorage.getItem("token");
       await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}onlineRooms/${formattedDate}`,
@@ -361,13 +438,7 @@ const RoomsPage = () => {
       )
         .then((res) => res.json())
         .then((data) => {
-          console.log("Resposta completa da API:", data);
-
           if (data && data.onlineRooms) {
-            console.log(
-              "Dado correto para setRoomsAvailability:",
-              data.onlineRooms
-            );
             setReserveDate(data?.date);
             setRoomsAvailability(data?.onlineRooms);
           } else {
@@ -398,14 +469,22 @@ const RoomsPage = () => {
 
   const weekDays = getWeekDays(weekOffset);
 
-  let slots = [];
-  let startTime = setMinutes(setHours(startOfDay(new Date()), 9), 0);
-  let endTime = setMinutes(setHours(startOfDay(new Date()), 18), 0);
+  // Função para obter os slots de horário
+  const getSlots = (date) => {
+    let slots = [];
+    let startTime = setMinutes(setHours(startOfDay(date), 9), 0);
+    let endTime =
+      date.getDay() === 5
+        ? setMinutes(setHours(startOfDay(date), 15), 0)
+        : setMinutes(setHours(startOfDay(date), 18), 0);
 
-  while (startTime < endTime) {
-    slots.push(format(startTime, "HH:mm"));
-    startTime = addMinutes(startTime, 15); // Adiciona 15 minutos
-  }
+    while (startTime < endTime) {
+      slots.push(format(startTime, "HH:mm"));
+      startTime = addMinutes(startTime, 15); // Adiciona 15 minutos
+    }
+
+    return slots;
+  };
 
   useEffect(() => {
     setSelectedDate(
@@ -415,14 +494,11 @@ const RoomsPage = () => {
     );
   }, [weekOffset]);
 
-  useEffect(() => {
-    getUserLogged();
-    console.log(userLogged);
-  }, []);
+  const selectedSlots = getSlots(selectedDate);
 
   useEffect(() => {
-    console.log(userLogged);
-  }, [userLogged]);
+    getUserLogged();
+  }, []);
 
   useEffect(() => {
     getOnlineRooms();
@@ -433,9 +509,8 @@ const RoomsPage = () => {
 
   useEffect(() => {
     if (roomsAvailability.length > 0) {
-      console.log("Estado rooms atualizado:", roomsAvailability);
     }
-  }, [roomsAvailability]); // Só executa quando `roomsAvailability` tiver dados
+  }, [roomsAvailability]);
 
   return (
     <>
@@ -444,7 +519,7 @@ const RoomsPage = () => {
           <IconButton
             icon={<ArrowBackIcon />}
             aria-label="Voltar"
-            onClick={() => router.push('/home')}
+            onClick={() => router.push("/home")}
             colorScheme="gray"
           />
           <Button colorScheme="gray" onClick={handleLogout}>
@@ -459,6 +534,11 @@ const RoomsPage = () => {
               <Button onClick={() => setWeekOffset(weekOffset - 1)}>
                 Semana Anterior
               </Button>
+              <Image
+                src="/img/logo_newton_2.png"
+                alt="Logo Newton"
+                width="30%"
+              />
               <Button onClick={() => setWeekOffset(weekOffset + 1)}>
                 Próxima Semana
               </Button>
@@ -513,12 +593,34 @@ const RoomsPage = () => {
               <Tr>
                 <Th>Horário</Th>
                 {rooms.map((room) => (
-                  <Th key={room.online_room_id}>{room.name_room}</Th>
+                  <Th key={room.online_room_id} textAlign="center">
+                    <Tooltip
+                      label={
+                        <a
+                          href={room.link_room}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {room.link_room}
+                        </a>
+                      }
+                      hasArrow
+                      placement="top"
+                    >
+                      <a
+                        href={room.link_room}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {room.name_room}
+                      </a>
+                    </Tooltip>
+                  </Th>
                 ))}
               </Tr>
             </Thead>
             <Tbody>
-              {slots.map((time, index) => (
+              {selectedSlots.map((time, index) => (
                 <Tr key={index}>
                   <Td>{time}</Td>
                   {roomsAvailability.length > 0 ? (
@@ -529,6 +631,8 @@ const RoomsPage = () => {
                       let reservationForTimeSlot = "Livre";
                       let reservationId = null;
                       let reservationUserId = null;
+                      let reservationEndHour = null;
+                      let reservationStartHour = null;
 
                       if (roomData && roomData.availability !== "Livre") {
                         roomData.availability.forEach((reservation) => {
@@ -561,6 +665,8 @@ const RoomsPage = () => {
                             reservationForTimeSlot = `${reservation.description}`;
                             reservationId = reservation.id;
                             reservationUserId = reservation.user_id;
+                            reservationEndHour = `${reservation.end_time}`;
+                            reservationStartHour = `${reservation.start_time}`;
                           }
                         });
                       }
@@ -574,15 +680,29 @@ const RoomsPage = () => {
                                 room.id,
                                 room.name_room,
                                 time,
-                                slots
+                                selectedSlots
+                              );
+                            } else {
+                              handleOpenDetails(
+                                reservationId,
+                                reservationUserId,
+                                reservationForTimeSlot,
+                                reservationStartHour,
+                                reservationEndHour,
+                                room.name_room
                               );
                             }
                           }}
-                          style={{
-                            cursor:
+                          sx={{
+                            maxWidth: "150px", // Define a largura máxima
+                            overflow: "hidden", // Oculta o conteúdo que excede a largura
+                            textOverflow: "ellipsis", // Adiciona "..." ao final do texto que não cabe
+                            whiteSpace: "nowrap",
+                            textAlign:
                               reservationForTimeSlot === "Livre"
-                                ? "pointer"
+                                ? "center"
                                 : "default",
+                            cursor: "pointer",
                             borderRadius: "5px",
                             background:
                               reservationForTimeSlot !== "Livre"
@@ -590,26 +710,21 @@ const RoomsPage = () => {
                                 : "transparent",
                           }}
                         >
-                          {reservationForTimeSlot}
-                          {reservationForTimeSlot !== "Livre" &&
-                            (reservationUserId === userLogged?.id ||
-                              userLogged?.role_id === 1) && (
-                              <IconButton
-                                variant="ghost"
-                                mr={-20}
-                                left={5}
-                                colorScheme="red"
-                                size="sm"
-                                icon={<DeleteIcon />}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteModal(
-                                    reservationId,
-                                    room.name_room
-                                  );
-                                }}
-                              />
-                            )}
+                          {reservationForTimeSlot !== "Livre" ? (
+                            <div
+                              title="Detalhes da Reserva"
+                              style={{
+                                maxWidth: "100%", // Garante que o div ocupe a largura máxima da célula
+                                overflow: "hidden", // Oculta o conteúdo que excede a largura
+                                textOverflow: "ellipsis", // Adiciona "..." ao final do texto que não cabe
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {reservationForTimeSlot}
+                            </div>
+                          ) : (
+                            reservationForTimeSlot
+                          )}
                         </Td>
                       );
                     })
@@ -631,17 +746,27 @@ const RoomsPage = () => {
           </ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <FormControl>
-              <FormLabel>Hora de Início</FormLabel>
-              <Input type="text" value={selectedTime} readOnly />
+            <FormControl isInvalid={selectedTimeError}>
+              <FormLabel>
+                Hora de Início <span style={{ color: "red" }}>*</span>
+              </FormLabel>
+              <Input
+                type="text"
+                value={selectedTime}
+                readOnly
+                borderColor={selectedTimeError ? "red.500" : ""}
+              />
             </FormControl>
 
-            <FormControl mt={4}>
-              <FormLabel>Hora de Fim</FormLabel>
+            <FormControl mt={4} isInvalid={endTimeError}>
+              <FormLabel>
+                Hora de Fim <span style={{ color: "red" }}>*</span>
+              </FormLabel>
               <Select
                 required
                 placeholder="Selecione o horário de fim"
                 onChange={handleEndTimeChange}
+                borderColor={endTimeError ? "red.500" : ""}
               >
                 {availableEndTimes.map((endTime, index) => (
                   <option key={index} value={endTime}>
@@ -650,20 +775,30 @@ const RoomsPage = () => {
                 ))}
               </Select>
             </FormControl>
-            <FormControl mt={4}>
-              <FormLabel>Descrição</FormLabel>
+
+            <FormControl mt={4} isInvalid={descriptionError}>
+              <FormLabel>
+                Descrição <span style={{ color: "red" }}>*</span>
+              </FormLabel>
               <Input
                 required
                 type="text"
                 value={description}
                 onChange={handleDescriptionChange}
+                borderColor={descriptionError ? "red.500" : ""}
               />
             </FormControl>
+
             {userLogged?.role_id === 1 && (
               <>
-                <FormControl mt={4}>
-                  <FormLabel>Recorrência</FormLabel>
-                  <Select onChange={handleRecurrenceChange}>
+                <FormControl mt={4} isInvalid={recurrenceError}>
+                  <FormLabel>
+                    Recorrência <span style={{ color: "red" }}>*</span>
+                  </FormLabel>
+                  <Select
+                    onChange={handleRecurrenceChange}
+                    borderColor={recurrenceError ? "red.500" : ""}
+                  >
                     <option value="1">Não Recorrente</option>
                     <option value="2">Todos os dias</option>
                     <option value="3">Semanal</option>
@@ -676,7 +811,10 @@ const RoomsPage = () => {
                   recurrentId !== "4" &&
                   recurrentId !== "2" && (
                     <FormControl mt={4}>
-                      <FormLabel>Dia da recorrência</FormLabel>
+                      <FormLabel>
+                        Dia da recorrência{" "}
+                        <span style={{ color: "red" }}>*</span>
+                      </FormLabel>
                       <Select
                         placeholder="Selecione a recorrência"
                         onChange={handleRecurrenceDay}
@@ -692,15 +830,73 @@ const RoomsPage = () => {
               </>
             )}
           </ModalBody>
-
           <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={handleReservation}>
+            <Button colorScheme="blue" mr={3} onClick={handleSubmit}>
               Reservar
             </Button>
             <Button variant="ghost" onClick={closeModal}>
               Cancelar
             </Button>
           </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isOpenDetails} onClose={handleCloseDetails}>
+        <ModalOverlay />
+        <ModalContent padding={5}>
+          <ModalHeader mt={5}>
+            <Text fontSize="2xl" textAlign="center" color="gray.700">
+              Detalhes da Reserva
+            </Text>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody mt={3} mb={5}>
+            {selectedReservation && (
+              <VStack spacing={4}>
+                <Box>
+                  <Text fontWeight="bold" fontSize="lg">
+                    Descrição:
+                  </Text>
+                  <Text whiteSpace="pre-wrap" wordBreak="break-word">
+                    {selectedReservation.description}
+                  </Text>
+                </Box>
+                <Box>
+                  <Text fontWeight="bold" fontSize="lg">
+                    Data e Hora:{" "}
+                    <Text as="span" fontWeight="normal">
+                      {selectedReservation.start} - {selectedReservation.end}
+                    </Text>
+                  </Text>
+                </Box>
+                {(selectedReservation.userId === userLogged?.id ||
+                  userLogged?.role_id === 1) && (
+                  <Button
+                    colorScheme="red"
+                    width="100%"
+                    mt={4}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteModal(
+                        selectedReservation.id,
+                        selectedReservation.room
+                      );
+                    }}
+                  >
+                    Deletar Reserva
+                  </Button>
+                )}
+              </VStack>
+            )}
+            <Button
+              onClick={handleCloseDetails}
+              colorScheme="blue"
+              width="100%"
+              mt={4}
+            >
+              Fechar
+            </Button>
+          </ModalBody>
         </ModalContent>
       </Modal>
 
