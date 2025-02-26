@@ -1070,9 +1070,6 @@ const RoomsPage = () => {
                 borderColor={descriptionError ? "red.500" : ""}
               />
             </FormControl>
-
-            {/* Recorrência (Somente para Admins) */}
-            {userLogged?.role_id === 1 && (
               <>
                 <FormControl mt={4} isInvalid={recurrenceError}>
                   <FormLabel>
@@ -1113,7 +1110,6 @@ const RoomsPage = () => {
                     </FormControl>
                   )}
               </>
-            )}
           </ModalBody>
           <ModalFooter>
             <Button colorScheme="blue" mr={3} onClick={handleSubmit}>
@@ -1189,8 +1185,6 @@ const RoomsPage = () => {
                 borderColor={descriptionError ? "red.500" : ""}
               />
             </FormControl>
-            {/* Recorrência (Somente para Admins) */}
-            {userLogged?.role_id === 1 && (
               <>
                 <FormControl mt={4} isInvalid={recurrenceError}>
                   <FormLabel>
@@ -1231,7 +1225,6 @@ const RoomsPage = () => {
                     </FormControl>
                   )}
               </>
-            )}
           </ModalBody>
           <ModalFooter>
             {(selectedReservation.userId === userLogged?.id ||
