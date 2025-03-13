@@ -7,7 +7,7 @@ const withAuth = (WrappedComponent) => {
       const accessToken = localStorage.getItem("token");
 
       if (!accessToken) {
-        redirect("/login");
+        redirect("/");
       }
     }, []);
 

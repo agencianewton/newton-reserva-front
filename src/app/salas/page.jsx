@@ -67,6 +67,7 @@ import { relative } from "path";
 import { isToday } from "date-fns";
 import { useRouter } from "next/navigation";
 import { parseISOWithOptions } from "date-fns/fp";
+import api from "../utils/api";
 
 const RoomsPage = () => {
   const [userLogged, setUserLogged] = useState();
@@ -252,12 +253,14 @@ const RoomsPage = () => {
       ...selectedReservation,
       recurrentId: event.target.value,
     });
+    setRecurrentId(event.target.value);
   };
   const handleRecurrenceDayEdit = (event) => {
     setSelectedReservation({
       ...selectedReservation,
       recurrentDay: event.target.value,
     });
+    setRecurrentDay(event.target.value);
   };
 
   // Função para alterar a descrição (para edição)
@@ -268,9 +271,8 @@ const RoomsPage = () => {
     });
   };
 
-  // Função para enviar as alterações da reserva (simulando uma requisição de atualização)
   const handleSubmitEdit = async () => {
-    // Lógica de validação dos dados (hora de início, fim, descrição)
+    // Validação dos dados (hora de início, fim, descrição)
     if (
       !selectedReservation.start ||
       !selectedReservation.end ||
@@ -281,8 +283,7 @@ const RoomsPage = () => {
       setDescriptionEditError(!selectedReservation.description);
       return;
     }
-
-    const token = localStorage.getItem("token");
+  
     const data = {
       id: selectedReservation.id,
       online_room_id: selectedReservation.roomId,
@@ -293,42 +294,31 @@ const RoomsPage = () => {
       start_time: selectedReservation.start,
       end_time: selectedReservation.end,
     };
-
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}reservation/onlineRoom/update/`+selectedReservation.id,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      }
-    );
-
-    const responseData = await res.json();
-    if (res.ok) {
+  
+    try {
+      const response = await api.put(`reservation/onlineRoom/update/${selectedReservation.id}`, data);
+  
       toast({
         title: "Reserva Atualizada com sucesso",
         status: "success",
         duration: 5000,
         isClosable: true,
       });
+  
       getInfoOnlineRooms(selectedDate);
-    } else {
+      console.log("Reserva atualizada com sucesso:", data);
+      handleCloseUpdate();
+    } catch (error) {
       toast({
         title: "Erro ao atualizar",
-        description: responseData.error,
+        description: error.response?.data?.error || "Erro desconhecido",
         status: "error",
         duration: 5000,
         isClosable: true,
       });
+      console.error("Erro ao atualizar reserva:", error.response?.data || error);
     }
-
-    console.log("reserva Atualizada com sucesso: ", data);
-
-    handleCloseUpdate();
-  };
+  };  
 
   const handleCloseUpdate = () => {
     setIsOpenUpdate(false);
@@ -482,30 +472,45 @@ const RoomsPage = () => {
 
   const handleDeleteReservation = async (reservationId) => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}onlineRoom/delete/${reservationId}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      const data = await response.json();
-      if (data.success) {
+      const response = await api.delete(`onlineRoom/delete/${reservationId}`);
+  
+      if (response.data.success) {
         console.log("Reserva deletada com sucesso");
+  
+        toast({
+          title: "Reserva deletada",
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+  
         getInfoOnlineRooms(selectedDate);
       } else {
-        console.error("Erro ao deletar a reserva", data.error);
+        console.error("Erro ao deletar a reserva:", response.data.error);
+        toast({
+          title: "Erro ao deletar reserva",
+          description: response.data.error || "Erro desconhecido",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
       }
     } catch (error) {
-      console.error("Erro ao deletar a reserva", error);
+      console.error("Erro ao deletar a reserva:", error);
+      toast({
+        title: "Erro ao deletar reserva",
+        description: error.response?.data?.error || "Erro desconhecido",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     }
+  
+    // Fechando os modais após a requisição
     handleCloseDetails();
     DeleteModalClose();
     handleCloseUpdate();
-  };
+  };  
 
   const closeModal = () => {
     setSelectedRoomId(null);
@@ -555,50 +560,31 @@ const RoomsPage = () => {
   };
 
   const handleReservation = async () => {
-    const token = localStorage.getItem("token");
-    const data = {
-      online_room_id: selectedRoomId,
-      date: reserveDate,
-      recurrent_id: recurrentId,
-      recurrent_day: recurrentDay,
-      description: description,
-      start_time: selectedTime,
-      end_time: endHourRegister,
-    };
-
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}reservation/onlineRoom`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      }
-    );
-
-    const responseData = await res.json();
-    if (res.ok) {
+    try {
+      const data = {
+        online_room_id: selectedRoomId,
+        date: reserveDate,
+        recurrent_id: recurrentId,
+        recurrent_day: recurrentDay,
+        description: description,
+        start_time: selectedTime,
+        end_time: endHourRegister,
+      };
+  
+      const res = await api.post("reservation/onlineRoom", data);
+  
       toast({
         title: "Reserva realizada com sucesso",
         status: "success",
         duration: 5000,
         isClosable: true,
       });
+  
       getInfoOnlineRooms(selectedDate);
-    } else {
-      toast({
-        title: "Erro ao reservar",
-        description: responseData.error,
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
+      closeModal();
+      console.log("reserva efetuada com sucesso: ", data);
+    } catch (error) {
     }
-
-    console.log("reserva efetuada com sucesso: ", data);
-    closeModal();
   };
 
   const handleDescriptionChange = (e) => {
@@ -611,14 +597,8 @@ const RoomsPage = () => {
   const handleLogout = async () => {
     if (userLogged) {
       const token = localStorage.getItem("token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}logout`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-      if (res.ok) {
+      const res = await api.post("logout");
+      try {
         toast({
           title: "Logout efetuado com sucesso",
           status: "success",
@@ -626,6 +606,8 @@ const RoomsPage = () => {
           isClosable: true,
         });
         router.push("/");
+      } catch (error) {
+
       }
     } else {
       router.push("/");
@@ -640,77 +622,54 @@ const RoomsPage = () => {
   };
 
   const getUserLogged = async () => {
-    const token = localStorage.getItem("token");
-    console.log(token);
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}user`, {
-      method: "GET",
+    try {
+        const token = localStorage.getItem("token");
 
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setUserLogged(data);
-        setAuthUserId(data.id);
-      })
-      .catch((error) => {
-        console.error("Erro ao buscar o usuário logado:", error);
-      });
-  };
-
-  const getOnlineRooms = async () => {
-    const token = localStorage.getItem("token");
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}get/onlineRooms`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Erro na requisição");
+        if (!token) {
+            throw new Error("Token não encontrado. Usuário não autenticado.");
         }
-        return response.json();
-      })
-      .then((data) => {
-        setRooms(data);
-      })
-      .catch((error) => {
-        console.error("Erro ao buscar as salas:", error);
-      });
-  };
 
-  const getInfoOnlineRooms = async (date) => {
-    if (date) {
-      const formattedDate = format(date, "yyyy-MM-dd");
-      const token = localStorage.getItem("token");
-      await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}onlineRooms/${formattedDate}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      )
-        .then((res) => res.json())
-        .then((data) => {
-          if (data && data.onlineRooms) {
-            setReserveDate(data?.date);
-            setRoomsAvailability(data?.onlineRooms);
-          } else {
-            console.error("Erro: 'onlineRooms' não está na resposta:", data);
-          }
-        })
-        .catch((error) => {
-          console.error("Error fetching data:", error);
+        const response = await api.get("/user", {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
         });
+
+        setUserLogged(response.data);
+        setAuthUserId(response.data.id);
+    } catch (error) {
+        console.error("Erro ao buscar o usuário logado:", error.response?.data || error);
+    }
+};
+
+  
+  
+  const getOnlineRooms = async () => {
+    try {
+      const response = await api.get("get/onlineRooms");
+      setRooms(response.data);
+    } catch (error) {
+      console.error("Erro ao buscar as salas:", error.response?.data || error);
     }
   };
+  
+  const getInfoOnlineRooms = async (date) => {
+    if (!date) return;
+  
+    try {
+      const formattedDate = format(date, "yyyy-MM-dd");
+      const response = await api.get(`onlineRooms/${formattedDate}`);
+  
+      if (response.data?.onlineRooms) {
+        setReserveDate(response.data.date);
+        setRoomsAvailability(response.data.onlineRooms);
+      } else {
+        console.error("Erro: 'onlineRooms' não está na resposta:", response.data);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar informações das salas:", error.response?.data || error);
+    }
+  };  
 
   // Função para obter os próximos 5 dias úteis (de segunda a sexta)
   const getWeekDays = (offset) => {
@@ -755,7 +714,53 @@ const RoomsPage = () => {
     );
   }, [weekOffset]);
 
+  // const refreshToken = async () => {
+  //   try {
+  //     // Solicitar um novo access_token e refresh_token usando o refresh token
+  //     const response = await api.post('/token/refresh', {}, {
+  //       withCredentials: true,  // Enviar o refresh token armazenado no cookie
+  //     });
+  
+  //     // Atualizar o localStorage com o novo access_token
+  //     localStorage.setItem('access_token', response.data.access_token);
+  
+  //     // Atualizar o refresh_token no cookie (se necessário)
+  //     document.cookie = `refresh_token=${response.data.refresh_token}; path=/; SameSite=Strict;`;
+  
+  //     // Opcional: Mensagem de sucesso (ou outro tratamento conforme necessário)
+  //     console.log('Tokens renovados com sucesso');
+      
+  //   } catch (error) {
+  //     console.error('Erro ao renovar token:', error);
+      
+  //     // Redireciona para a página de login caso o refresh falhe
+  //     window.location.href = "/";  // Redirecionar para login
+  //   }
+  // };
+  
+
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     refreshToken();
+  //   }, 1000 * 60 * 50); // Tentar renovar o token a cada 50 minutos
+
+  //   return () => clearInterval(interval); // Limpar o intervalo ao desmontar o componente
+  // }, []);
+
   const selectedSlots = getSlots(selectedDate);
+
+  // const getTokenExpiration = (token) => {
+  //   if (!token) return null;
+  
+  //   const payload = JSON.parse(atob(token.split(".")[1])); // Decodifica a parte do payload do JWT
+  //   return payload.exp ? new Date(payload.exp * 1000) : null; // Converte timestamp para data
+  // };
+  
+  // const token = localStorage.getItem("token");
+  // const expirationDate = getTokenExpiration(token);
+  
+  // console.log("Token expira em:", expirationDate);
+  
 
   useEffect(() => {
     getUserLogged();
@@ -856,7 +861,7 @@ const RoomsPage = () => {
               <Tr>
                 <Th>Horário</Th>
                 {rooms.map((room) => (
-                  <Th key={room.online_room_id} textAlign="center">
+                  <Th key={`${room.online_room_id}-${room.name_room}`} textAlign={'center'}>
                     <Tooltip
                       label={
                         <a
