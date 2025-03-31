@@ -199,6 +199,11 @@ const users = [
   // { id: 62, name: "Thayane", email: "habilitacao@febrasgo.org.br" },
   { id: 63, name: "Thaysa Nunes", email: "thaysa.nunes@newton.ag" },
   {
+    id: 69,
+    name: "Thiago Carotta",
+    email: "thiago.carotta@newton.ag",
+  },
+  {
     id: 64,
     name: "Thomaz Soutello",
     email: "thomaz.soutello@newton.ag",
