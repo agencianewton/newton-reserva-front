@@ -190,6 +190,11 @@ const users = [
     role_id: 3,
   },
   {
+    id: 70,
+    name: "Tayna Lima",
+    email: "tayna.lima@newton.ag",
+  },
+  {
     id: 59,
     name: "Thaila Moura",
     email: "thaila.moura@newton.ag",
