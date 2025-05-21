@@ -72,6 +72,11 @@ const users = [
     name: "Camila Caratti",
     email: "camila.caratti@newton.ag",
   },
+  {
+    id: 71,
+    name: "Caroline Oliveira",
+    email: "caroline.oliveira@newton.ag",
+  },
   { id: 17, name: "Cindy Souza", email: "cindy.souza@newton.ag" },
   {
     id: 18,
