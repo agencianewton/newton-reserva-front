@@ -35,12 +35,26 @@ import {
   TableCaption,
   TableContainer,
   IconButton,
+  Image,
+  Center,
+  VStack,
+  useBreakpointValue,
 } from "@chakra-ui/react";
+import {
+  format,
+  setDate,
+  addDays,
+  startOfWeek,
+  isWeekend,
+  parseISO,
+  isValid,
+} from "date-fns";
 import "./home.css";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { format, setDate } from "date-fns";
 import withAuth from "../components/AuthComponent/withAuth";
+import { ptBR } from "date-fns/locale";
+import { isToday } from "date-fns";
 
 import { ArrowBackIcon, CalendarIcon } from "@chakra-ui/icons";
 import NavBar from "../components/navBar";
@@ -55,6 +69,7 @@ const HomePage = () => {
   const [tablesAvailability, setTablesAvailability] = useState([]);
   const [tableID, setTableID] = useState();
   const [tableType, setTableType] = useState();
+  const [weekOffset, setWeekOffset] = useState(0);
   const [periodReserve, setPeriodReserve] = useState("");
   const [tableReserved, setTableReserved] = useState([]);
   const [reserveDate, setReserveDate] = useState(null);
@@ -478,7 +493,6 @@ const HomePage = () => {
       .then((response) => response.json())
       .then((data) => {
         setUserLogged(data);
-        console.log(userLogged);
         setAuthUserId(data.id); // Armazene o ID do usuário no estado, se necessário
       })
       .catch((error) => {
@@ -676,6 +690,38 @@ const HomePage = () => {
     setEndTime(selectedEndTime);
   };
 
+  const gridTemplateColumns = useBreakpointValue({
+    base: "repeat(2, 1fr)",
+    md: "repeat(5, 1fr)",
+  });
+  const buttonWidth = useBreakpointValue({ base: "100%", md: "50%" });
+
+  // Função para obter os próximos 5 dias úteis (de segunda a sexta)
+  const getWeekDays = (offset) => {
+    let days = [];
+    let monday = startOfWeek(new Date(), { weekStartsOn: 1 }); // Pega a segunda-feira da semana
+    let date = addDays(monday, offset * 7); // Move para a semana correta
+
+    while (days.length < 5) {
+      if (!isWeekend(date)) {
+        days.push(new Date(date)); // Clona a data para evitar referências
+      }
+      date = addDays(date, 1); // Avança um dia
+    }
+
+    return days;
+  };
+
+  const weekDays = getWeekDays(weekOffset);
+
+  useEffect(() => {
+      setSelectedDate(
+        weekDays.find(
+          (day) => day.toDateString() === new Date().toDateString()
+        ) || weekDays[0]
+      );
+    }, [weekOffset]);
+
   // useEffect(() => {
   //   availableStartHours, availableEndHours, reservedHours
 
@@ -734,18 +780,64 @@ const HomePage = () => {
       </Flex>
       <Flex justifyContent={"center"} py={12} px={6} wrap={"wrap"}>
         <Stack>
-          <Box>
-            <Heading textAlign={"center"} fontSize={"2rem"}>
-              Selecione a data para verificar disponibilidade de mesas:
-            </Heading>
-          </Box>
-          <Box textAlign={"center"}>
-            <DatePicker
-              dateFormat="dd/MM/yyyy"
-              selected={startDate}
-              onChange={(date) => handleDateChange(date)}
-              customInput={<Input pr="4.5rem" icon={<CalendarIcon />} />}
-            />
+          <Box textAlign="center">
+            {/* Controles de navegação */}
+            <Center>
+              <Flex justify="space-between" width={buttonWidth} gap={10} mb={4}>
+                <Button onClick={() => setWeekOffset(weekOffset - 1)}>
+                  Semana Anterior
+                </Button>
+                <Image
+                  src="/img/logo_newton_2.png"
+                  alt="Logo Newton"
+                  width="20%"
+                  height={"100%"}
+                  mt={-8}
+                />
+                <Button onClick={() => setWeekOffset(weekOffset + 1)}>
+                  Próxima Semana
+                </Button>
+              </Flex>
+            </Center>
+  
+            {/* Dias da semana */}
+            <Center>
+              <Grid
+                templateColumns={gridTemplateColumns}
+                gap={2}
+                mt={10}
+                width={"70%"}
+              >
+                {weekDays.map((day, index) => (
+                  <VStack key={index}>
+                    <Text fontSize="md" fontWeight="bold">
+                      {format(day, "EEEE", { locale: ptBR })}
+                    </Text>
+                    <Button
+                      onClick={() => setStartDate(day)}
+                      colorScheme={
+                        startDate?.toDateString() === day.toDateString()
+                          ? "blue"
+                          : isToday(day)
+                          ? "green"
+                          : "gray"
+                      }
+                      width="100%"
+                    >
+                      {format(day, "dd/MM/yyyy")}
+                    </Button>
+                  </VStack>
+                ))}
+              </Grid>
+            </Center>
+  
+            {/* Exibir data selecionada */}
+            {startDate && (
+              <Text mt={4} mb={10}>
+                Dia selecionado:{" "}
+                {format(startDate, "dd 'de' MMMM", { locale: ptBR })}
+              </Text>
+            )}
           </Box>
         </Stack>
       </Flex>
@@ -2147,7 +2239,7 @@ const HomePage = () => {
               selected={reserveDate != null ? reserveDate : startDate}
               onChange={(date) => setReserveDate(date)}
               dateFormat="dd/MM/yyyy"
-              customInput={<Input pr="4.5rem" icon={<CalendarIcon />} />}
+              customInput={<Input textAlign={"center"} icon={<CalendarIcon />} />}
             />
             {tableType === 3 && (
               <>
@@ -2185,7 +2277,7 @@ const HomePage = () => {
                         <Td>{element.start_time}</Td>
                         <Td>{element.end_time}</Td>
                         <Td>
-                          {authUserId === element.user_id && ( // Exibir o botão apenas se o user_id corresponder
+                          {(authUserId === element.user_id || userLogged.role_id === 1) && ( // Exibir o botão apenas se o user_id corresponder
                             <Button
                               colorScheme="red"
                               onClick={() => {
