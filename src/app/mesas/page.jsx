@@ -2277,7 +2277,7 @@ const HomePage = () => {
                         <Td>{element.start_time}</Td>
                         <Td>{element.end_time}</Td>
                         <Td>
-                          {(authUserId === element.user_id || userLogged.role_id === 1) && ( // Exibir o botão apenas se o user_id corresponder
+                          {(authUserId === element.user_id || userLogged.role_id === 1) && ( // Exibir o botão apenas se o user_id corresponder ou ser Adminstrador
                             <Button
                               colorScheme="red"
                               onClick={() => {
@@ -2380,7 +2380,7 @@ const HomePage = () => {
                         <Td>{element.start_time}</Td>
                         <Td>{element.end_time}</Td>
                         <Td>
-                          {authUserId === element.user_id && ( // Exibir o botão apenas se o user_id corresponder
+                          {(authUserId === element.user_id || userLogged.role_id === 1) && ( // Exibir o botão apenas se o user_id corresponder ou ser Adminstrador
                             <Button
                               colorScheme="red"
                               onClick={() => {
