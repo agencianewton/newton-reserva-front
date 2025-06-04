@@ -83,7 +83,11 @@ export default function login() {
                 justify={"space-between"}
               >
                 <Checkbox>Lembrar de mim </Checkbox>
-                <Link color={"blue.400"}>Esqueceu a Senha?</Link>
+                <NextLink href="/forgot-password" passHref>
+                  <Text color="blue.400" cursor="pointer">
+                    Esqueceu a Senha?
+                  </Text>
+                </NextLink>
               </Stack>
               <Button
                 bg={"blue.400"}
