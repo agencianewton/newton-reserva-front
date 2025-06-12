@@ -11,7 +11,9 @@ import {
   FormLabel,
   Input,
   Button,
+  useToast,
 } from "@chakra-ui/react";
+import { useRouter } from "next/navigation";
 
 export default function ResetPassword() {
   const [token, setToken] = useState(null);
@@ -22,7 +24,8 @@ export default function ResetPassword() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-
+  const toast = useToast();
+  const router = useRouter();
   // Pega token e email da URL quando o componente monta
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -66,10 +69,21 @@ export default function ResetPassword() {
       if (!res.ok) {
         throw new Error(data.message || "Erro ao resetar senha");
       }
-
-      setSuccess("Senha alterada com sucesso! Você pode fechar esta página.");
       setPassword("");
       setConfirmPassword("");
+
+      setTimeout(() => {
+        router.push("/");
+      }, 3000);
+      if (res.ok) {
+        toast({
+          title: "Sucesso!",
+          description: "Sua senha foi alterada com sucesso, retornando para a página de login.",
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -110,18 +124,6 @@ export default function ResetPassword() {
                   minLength={6}
                 />
               </FormControl>
-
-              {error && (
-                <Text color="red.500" fontSize="sm" textAlign="center">
-                  {error}
-                </Text>
-              )}
-              {success && (
-                <Text color="green.500" fontSize="sm" textAlign="center">
-                  {success}
-                </Text>
-              )}
-
               <Button
                 type="submit"
                 isLoading={loading}
