@@ -236,16 +236,17 @@ const RoomsPage = () => {
     });
 
     // Atualizando as horas de fim disponíveis com base na hora de início selecionada
-    updateAvailableEndTimes(selectedReservation.start, selectedReservation.roomId, selectedSlots);
+    updateAvailableEndTimes(newStartTime, selectedReservation.roomId, selectedSlots);
   };
 
   // Função para alterar a hora de fim (para edição)
   const handleEditEndTimeChange = (event) => {
+    const newEndTime = event.target.value;
     setSelectedReservation({
       ...selectedReservation,
-      end: event.target.value,
+      end: newEndTime,
     });
-    updateAvailableStartTimes(selectedReservation.end, selectedReservation.roomId, selectedSlots);
+    updateAvailableStartTimes(newEndTime, selectedReservation.roomId, selectedSlots);
   };
 
   const handleRecurrenceEditChange = (event) => {
