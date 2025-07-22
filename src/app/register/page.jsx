@@ -230,6 +230,11 @@ const users = [
     name: "Vladimir Araujo",
     email: "vladimir.maciel@newton.ag",
   },
+  {
+    id: 69,
+    name: "Oscar Gaspari",
+    email: "oscar.gaspari@newton.ag",
+  },
 ];
 
 export default function Register() {
