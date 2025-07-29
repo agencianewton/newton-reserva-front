@@ -60,8 +60,13 @@ import { ArrowBackIcon, CalendarIcon } from "@chakra-ui/icons";
 import NavBar from "../components/navBar";
 import { relative } from "path";
 import { useRouter } from "next/navigation";
+import React, { useRef } from "react";
 
 const HomePage = () => {
+  const scrollRef = useRef(null);
+  const isDragging = useRef(false);
+  const startPos = useRef({ x: 0, y: 0 });
+  const scrollPos = useRef({ left: 0, top: 0 });
   const [selectedDate, setSelectedDate] = useState(null);
   const router = useRouter();
 
@@ -92,6 +97,7 @@ const HomePage = () => {
   const [reservationDeleted, setReservationDeleted] = useState(false);
   const [userLogged, setUserLogged] = useState();
   const [reservationDeletedTable, setReservationDeletedTable] = useState(false);
+  const [isDraggingUI, setIsDraggingUI] = useState(false);
 
   const openModalOne = () => setModalOneOpen(true);
 
@@ -104,6 +110,43 @@ const HomePage = () => {
     setModalOneOpen(false); // Chama a função onClose para fechar o modal
   };
 
+    const handleMouseDown = (e) => {
+    // Ignora drag se clicou numa sala/mesa
+    if (e.target.closest(".mesa") || e.target.closest(".sala")) return;
+
+    isDragging.current = true;
+    setIsDraggingUI(true);
+    document.body.style.userSelect = "none"; // desativa seleção
+    startPos.current = { x: e.pageX, y: e.pageY };
+    scrollPos.current = {
+      left: scrollRef.current.scrollLeft,
+      top: scrollRef.current.scrollTop,
+    };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging.current) return;
+    e.preventDefault();
+    const dx = e.pageX - startPos.current.x;
+    const dy = e.pageY - startPos.current.y;
+    scrollRef.current.scrollLeft = scrollPos.current.left - dx;
+    scrollRef.current.scrollTop = scrollPos.current.top - dy;
+  };
+
+  const stopDragging = () => {
+    isDragging.current = false;
+    setIsDraggingUI(false);
+    document.body.style.userSelect = ""; // restaura seleção
+  };
+
+    const scrollLeft = () => {
+    scrollRef.current.scrollBy({ left: -300, behavior: "smooth" });
+  };
+
+  const scrollRight = () => {
+    scrollRef.current.scrollBy({ left: 300, behavior: "smooth" });
+  };
+
   const toast = useToast();
 
   const handleClickTable = async (tableID, tableType) => {
@@ -112,15 +155,15 @@ const HomePage = () => {
       setTableType(tableType);
       await getReservationTable(tableID, startDate);
       onOpen();
-    } else if (tableID == 4 || tableID == 6 || tableID == 8 || tableID == 10) {
-      if (userLogged.role_id == 3) {
-        setTableID(tableID);
-        setTableType(tableType);
-        await getReservationTable(tableID, startDate);
-        onOpen();
-      } else {
-        alert("Você não tem permissão para efetuar essa reserva");
-      }
+    // } else if (tableID == 4 || tableID == 6 || tableID == 8 || tableID == 10) {
+    //   if (userLogged.role_id == 3) {
+    //     setTableID(tableID);
+    //     setTableType(tableType);
+    //     await getReservationTable(tableID, startDate);
+    //     onOpen();
+    //   } else {
+    //     alert("Você não tem permissão para efetuar essa reserva");
+    //   }
     } else {
       setTableID(tableID);
       setTableType(tableType);
@@ -841,8 +884,42 @@ const HomePage = () => {
           </Box>
         </Stack>
       </Flex>
+      {/* Botão Esquerda */}
+      <Button
+        position="absolute"
+        top="70%"
+        left="30px"
+        transform="translateY(-50%)"
+        zIndex={10}
+        onClick={scrollLeft}
+        colorScheme="blue"
+      >
+        ◀
+      </Button>
+
+      {/* Botão Direita */}
+      <Button
+        position="absolute"
+        top="70%"
+        right="30px"
+        transform="translateY(-50%)"
+        zIndex={10}
+        onClick={scrollRight}
+        colorScheme="blue"
+      >
+        ▶
+      </Button>
       {tablesAvailability && (
-        <Flex>
+        <Flex
+        ref={scrollRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={stopDragging}
+        onMouseLeave={stopDragging}
+        overflow="auto"
+        cursor={isDraggingUI ? "grabbing" : "grab"}
+        w="100%"
+        h="100vh">
           <Box
             py={12}
             px={6}
@@ -1881,8 +1958,10 @@ const HomePage = () => {
                   <GridItem borderRight={"1px"} minH={"80px"} maxW={"100px"}>
                     {" "}
                   </GridItem>
+                  
                   <img className="entrada" src="/img/entrada.png"></img>
                   <img className="movel" src="/img/movel.png"></img>
+                  <p className="entrada-text">ENTRADA</p>
                 </Grid>
               </Box>
               <Box display={"block"} width={"100%"} mt={"-100px"} ml={"400px"}>

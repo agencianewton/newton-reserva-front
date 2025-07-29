@@ -122,6 +122,10 @@
   position: relative; 
   width: 170px;
   height: 90px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: white;
   background-size: cover;
   overflow: visible; 
 }
@@ -188,6 +192,13 @@
   height: 100px;
   margin-left: 615px;
   margin-top: -220px;
+}
+
+.entrada-text{
+  font-size: 20px;
+  font-weight: 600;
+  margin-left: -7px;
+  margin-top: -120px;
 }
 
 @import "rsuite/dist/rsuite.css";

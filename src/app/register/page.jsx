@@ -99,7 +99,7 @@ const users = [
   { id: 24, name: "Filipe Santos", email: "filipe.santos@newton.ag" },
   { id: 25, name: "Francisco de Assis", email: "francisco.assis@newton.ag" },
   { id: 26, name: "Gabriela Raposo", email: "gabriela.raposo@newton.ag" },
-  { id: 27, name: "Gael Dias", email: "gael.lucena@newton.ag", role_id: 3 },
+  { id: 27, name: "Gael Dias", email: "gael.lucena@newton.ag", role_id: 4 },
   { id: 28, name: "Gian Pedrol", email: "gianfranco.pedrol@newton.ag" },
   {
     id: 29,
@@ -156,6 +156,11 @@ const users = [
   { id: 45, name: "Nicoly Aragao", email: "nicoly.aragao@newton.ag" },
   { id: 46, name: "Nivia Resende", email: "nivia.resende@newton.ag" },
   { id: 47, name: "Operações", email: "operacoes@newton.ag" },
+  {
+    id: 72,
+    name: "Oscar Gaspari",
+    email: "oscar.gaspari@newton.ag",
+  },
   { id: 48, name: "Patricia Vianna", email: "patricia.vianna@newton.ag" },
   { id: 49, name: "Patrícia Lopes", email: "patricia@newton.ag" },
   { id: 50, name: "Paulo Cassis", email: "paulo.cassis@newton.ag" },
@@ -229,11 +234,6 @@ const users = [
     id: 68,
     name: "Vladimir Araujo",
     email: "vladimir.maciel@newton.ag",
-  },
-  {
-    id: 69,
-    name: "Oscar Gaspari",
-    email: "oscar.gaspari@newton.ag",
   },
 ];
 
@@ -355,6 +355,7 @@ export default function Register() {
               >
                 <option value="3">Diretor de Arte</option>
                 <option value="2">Colaborador</option>
+                <option value="4">Operações</option>
               </Select>
             </FormControl>
 
