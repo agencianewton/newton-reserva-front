@@ -264,8 +264,10 @@ export default function Register() {
       setEmail(user.email);
       if (user.role_id === 3) {
         setRoleType("3"); // Diretor de Arte
-      } else {
+      } else if(user.role_id === 2){
         setRoleType("2"); // Colaborador
+      } else {
+        setRoleType("4");
       }
       setIsEmailValid(user.email.endsWith("@newton.ag"));
     }

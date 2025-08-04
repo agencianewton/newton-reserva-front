@@ -906,7 +906,18 @@ const RoomsPage = () => {
                       let reservationRecurrentDay = null;
 
                       if (roomData && roomData.availability !== "Livre") {
+                        const todayStr = format(new Date(), "yyyy-MM-dd"); // data de hoje
+                        const selectedDateStr = format(selectedDate, "yyyy-MM-dd"); // data selecionada
+
                         roomData.availability.forEach((reservation) => {
+                          // Se a reserva for recorrente e a data selecionada for anterior a hoje, ignore
+                          if (
+                            reservation.recurrent_id !== 1 &&
+                            selectedDateStr < reservation.reservation_date
+                          ) {
+                            return; // pula para a próxima reserva
+                          }
+
                           const startTime = format(
                             new Date(`2025-02-03T${reservation.start_time}`),
                             "HH:mm"
@@ -917,21 +928,11 @@ const RoomsPage = () => {
                           );
 
                           if (
-                            (reservation.recurrent_id === 1 &&
-                              time >= startTime &&
-                              time < endTime) ||
-                            (reservation.recurrent_id === 2 &&
-                              time >= startTime &&
-                              time < endTime) ||
-                            (reservation.recurrent_id === 3 &&
-                              time >= startTime &&
-                              time < endTime) ||
-                            (reservation.recurrent_id === 4 &&
-                              time >= startTime &&
-                              time < endTime) ||
-                            (reservation.recurrent_id === 5 &&
-                              time >= startTime &&
-                              time < endTime)
+                            (reservation.recurrent_id === 1 && time >= startTime && time < endTime) ||
+                            (reservation.recurrent_id === 2 && time >= startTime && time < endTime) ||
+                            (reservation.recurrent_id === 3 && time >= startTime && time < endTime) ||
+                            (reservation.recurrent_id === 4 && time >= startTime && time < endTime) ||
+                            (reservation.recurrent_id === 5 && time >= startTime && time < endTime)
                           ) {
                             reservationForTimeSlot = `${reservation.description}`;
                             reservationId = reservation.id;
@@ -942,6 +943,7 @@ const RoomsPage = () => {
                             reservationRecurrentId = `${reservation.recurrent_id}`;
                           }
                         });
+
                       }
 
                       return (
