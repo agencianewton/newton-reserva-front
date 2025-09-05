@@ -176,47 +176,48 @@ const HomePage = () => {
     // Redefine os estados de horários disponíveis
     setFilteredStartHours([]);
     setFilteredEndHours([]);
-    setReservedHours([]); // Redefine o estado de reservas, se necessário
-    let date = startDate; // Data selecionada no modal
-    await reservesRoom(id, date);
-    await availableSlots();
+    setReservedHours([]);
+
+    let date = startDate;
+
+    // agora pega os dados direto da função
+    const reserved = await reservesRoom(id, date);
+    const available = await availableSlots();
+
     setConferenceRoomID(id);
 
-    // Filtra os horários disponíveis com base nas reservas e horários selecionados
+    // Filtra com os dados corretos
     const { filteredStartHours, filteredEndHours } = filterAvailableTimes(
-      reservedHours,
-      availableStartHours,
-      availableEndHours,
+      reserved,
+      available.startSlots,
+      available.endSlots,
       date
     );
     setDefaultEndHours(filteredEndHours);
     setDefaultStartHours(filteredStartHours);
 
-    // Atualiza os estados com os horários filtrados
     setFilteredStartHours(filteredStartHours);
     setFilteredEndHours(filteredEndHours);
   };
 
   const handleClickRoom = async (id) => {
     try {
-      setStartTime(""); // Reseta o horário de início
-      setEndTime(""); // Reseta o horário de fim
-      filterRooms(id);
+      setStartTime("");
+      setEndTime("");
       setDateReserve(startDate);
       let data = startDate;
       await getReservationRoom(id, data);
-
-      if (filteredStartHours.length > 0 || filteredEndHours.length > 0) {
-        setTimeout(() => {
-          openModalOne();
-        }, 300);
-      } else {
-        console.error("Horários não foram filtrados corretamente.");
-      }
+      await filterRooms(id);
     } catch (error) {
       console.error("Erro ao processar a reserva:", error);
     }
   };
+
+  useEffect(() => {
+    if (filteredStartHours.length > 0 || filteredEndHours.length > 0) {
+      openModalOne();
+    }
+  }, [filteredStartHours, filteredEndHours]);
 
   const deleteReservation = async (reservationId) => {
     try {
@@ -343,27 +344,39 @@ const HomePage = () => {
   };
 
   const availableSlots = async () => {
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}availableSlots`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        const { available_start_slots, available_end_slots } = data;
-        setAvailableStartHours(available_start_slots);
-        setAvailableEndHours(available_end_slots);
-      })
-      .catch((error) => {
-        console.error("Error fetching data:", error);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}availableSlots`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
+      const data = await res.json();
+
+      const { available_start_slots, available_end_slots } = data;
+
+      // atualiza os estados
+      setAvailableStartHours(available_start_slots);
+      setAvailableEndHours(available_end_slots);
+
+      // mas também retorna os dados
+      return {
+        startSlots: available_start_slots || [],
+        endSlots: available_end_slots || [],
+      };
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      return { startSlots: [], endSlots: [] };
+    }
   };
 
   const reservesRoom = async (id, date) => {
-    if (date) {
-      const formattedDate = format(date, "yyyy-MM-dd");
-      await fetch(
+    if (!date) return [];
+
+    const formattedDate = format(date, "yyyy-MM-dd");
+
+    try {
+      const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}room/${id}/${formattedDate}`,
         {
           method: "GET",
@@ -372,14 +385,17 @@ const HomePage = () => {
             "Cache-Control": "no-cache",
           },
         }
-      )
-        .then((res) => res.json())
-        .then((data) => {
-          setReservedHours(data.occupied_slots);
-        })
-        .catch((error) => {
-          console.error("Error fetching data:", error);
-        });
+      );
+      const data = await res.json();
+
+      // atualiza o estado (como antes)
+      setReservedHours(data.occupied_slots);
+
+      // mas também retorna os dados
+      return data.occupied_slots || [];
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      return [];
     }
   };
 
@@ -956,7 +972,6 @@ const HomePage = () => {
                         : "url('/img/varanda_ocupada.png')"
                     }
                     backgroundSize={"cover"}
-                    transform={"rotate(360deg)"}
                     className="vertical-text"
                     rowSpan={2}
                     colSpan={1}
