@@ -56,7 +56,7 @@ const HomePage = () => {
           flexDirection="row"
           gap={4}
         >
-          {/* <Button
+          <Button
             className="mesas"
             colorScheme="gray"
             onClick={handleRedirectTable}
@@ -64,7 +64,7 @@ const HomePage = () => {
             padding="30px 60px"
           >
             Mesas
-          </Button> */}
+          </Button>
           <Button
             className="salas"
             colorScheme="gray"
